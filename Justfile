@@ -17,3 +17,6 @@ setup:
    uv venv
    source .venv/bin/activate
    uv pip install -e .
+
+test:
+   $(uv python find) -m pytest tests

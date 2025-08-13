@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 import functools
 import hashlib
 import os
 import tempfile
 from pathlib import Path
 from types import FunctionType
-from typing import Callable, Union, overload
+from typing import TYPE_CHECKING, Callable, Union, overload
 
 import diskcache
 import polars as pl
-from ty_extensions import Intersection
 
-CallableFn = Intersection[FunctionType, Callable[[], None]]
+if TYPE_CHECKING:
+    from ty_extensions import Intersection
+
+    CallableFn = Intersection[FunctionType, Callable[[], None]]
 
 # PolarsType = TypeVar("PolarsType", bound=Union[pl.DataFrame, pl.LazyFrame])
 
