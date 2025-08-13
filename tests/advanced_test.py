@@ -19,13 +19,17 @@ def test_split_module_path(tmp_path):
 
     _ = test_func(42)
 
+    # Get the actual module and qualname from the function
+    module_name = test_func.__module__  # Will be "tests.advanced_test" or similar
+    func_qualname = test_func.__qualname__  # Will be "test_split_module_path.<locals>.test_func"
+    
     # Check structure: cache_dir/functions/module_name/function_name/args/result.parquet
     cache_path = Path(tmp_path)
     expected_symlink = (
         cache_path
         / "functions"
-        / "__main__"
-        / "test_func"
+        / module_name
+        / func_qualname
         / "arg0=42"
         / "result.parquet"
     )
@@ -52,12 +56,21 @@ def test_flat_module_path(tmp_path):
 
     _ = another_func("hello")
 
-    # Check structure: cache_dir/functions/full_qualname/args/cached_data.parquet
+    # Get the actual full qualname
+    module_name = another_func.__module__
+    func_qualname = another_func.__qualname__
+    full_qualname = f"{module_name}.{func_qualname}"
+    
+    # URL encode the full qualname (same as urllib.parse.quote(full_qualname, safe=""))
+    import urllib.parse
+    encoded_qualname = urllib.parse.quote(full_qualname, safe="")
+
+    # Check structure: cache_dir/functions/encoded_full_qualname/args/cached_data.parquet
     cache_path = Path(tmp_path)
     expected_symlink = (
         cache_path
         / "functions"
-        / "__main__.another_func"
+        / encoded_qualname
         / "arg0=hello"
         / "cached_data.parquet"
     )
@@ -79,13 +92,17 @@ def test_che_custom_dir_name(tmp_path):
 
     _ = custom_func()
 
+    # Get actual module and qualname
+    module_name = custom_func.__module__
+    func_qualname = custom_func.__qualname__
+
     # Check custom directory name
     cache_path = Path(tmp_path)
     expected_symlink = (
         cache_path
         / "my_cache"
-        / "__main__"
-        / "custom_func"
+        / module_name
+        / func_qualname
         / "no_args"
         / "output.parquet"
     )
@@ -102,13 +119,17 @@ def test_cache_with_kwargs(tmp_path):
 
     _ = func_with_kwargs(10, b="test")
 
+    # Get actual module and qualname
+    module_name = func_with_kwargs.__module__
+    func_qualname = func_with_kwargs.__qualname__
+
     # Check args directory includes kwargs
     cache_path = Path(tmp_path)
     expected_symlink = (
         cache_path
         / "functions"
-        / "__main__"
-        / "func_with_kwargs"
+        / module_name
+        / func_qualname
         / "arg0=10_b=test"
         / "data.parquet"
     )
@@ -155,9 +176,9 @@ def test_max_arg_length_truncation(tmp_path):
 
     _ = truncate_test("this_argument_is_very_long_and_should_be_truncated")
 
-    # Find the created directory
+    # Find the created directory (default symlink name is "output.parquet")
     cache_path = Path(tmp_path)
-    symlinks = list(cache_path.rglob("data.parquet"))
+    symlinks = list(cache_path.rglob("output.parquet"))
     assert len(symlinks) == 1
 
     # Check that argument was truncated to 10 characters
@@ -203,10 +224,16 @@ def test_multiple_functions_separate_directories(tmp_path):
     _ = func_a()
     _ = func_b()
 
+    # Get actual module and qualnames
+    module_name_a = func_a.__module__
+    func_qualname_a = func_a.__qualname__
+    module_name_b = func_b.__module__
+    func_qualname_b = func_b.__qualname__
+
     # Check separate directories were created
     cache_path = Path(tmp_path)
-    func_a_dir = cache_path / "functions" / "__main__" / "func_a"
-    func_b_dir = cache_path / "functions" / "__main__" / "func_b"
+    func_a_dir = cache_path / "functions" / module_name_a / func_qualname_a
+    func_b_dir = cache_path / "functions" / module_name_b / func_qualname_b
 
     assert func_a_dir.exists()
     assert func_b_dir.exists()
