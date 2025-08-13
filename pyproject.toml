@@ -3,24 +3,17 @@ name = "polarscache"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Louis Maddox", email = "louismmx@gmail.com" }
-]
+authors = [{ name = "Louis Maddox", email = "louismmx@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = [
-    "diskcache>=5.6.3",
-    "ty-extensions>=0.1.0",
-    "typing-extensions>=4.14.1",
+  "diskcache>=5.6.3",
+  "ty-extensions>=0.1.0",
+  "typing-extensions>=4.14.1",
 ]
 
 [build-system]
-requires = [
-  "pdm-backend"
-]
+requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [dependency-groups]
-dev = [
-    "polars>=1.32.2",
-    "pytest>=8.4.1",
-]
+dev = ["polars>=1.32.2", "pytest>=8.4.1"]

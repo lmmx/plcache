@@ -6,7 +6,8 @@ import os
 import tempfile
 from pathlib import Path
 from types import FunctionType
-from typing import TYPE_CHECKING, Callable, Union, overload
+from typing import TYPE_CHECKING, overload
+from collections.abc import Callable
 
 import diskcache
 import polars as pl
@@ -103,8 +104,8 @@ class PolarsCache:
         """
 
         def decorator(
-            func: CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]],
-        ) -> CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]]:
+            func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
+        ) -> CallableFn[..., pl.DataFrame | pl.LazyFrame]:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 # Generate cache key
