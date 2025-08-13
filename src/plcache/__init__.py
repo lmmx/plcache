@@ -1,3 +1,3 @@
-from .decorator import cache
+from .decorator import PolarsCache, cache
 
-__all__ = ["cache"]
+__all__ = ["cache", "PolarsCache"]

@@ -12,14 +12,6 @@ from plcache import cache
 BRIEF_WAIT = 0.01  # Cannot go lower without actual computation being longer
 
 
-@fixture
-def temp_cache_dir():
-    """Create a temporary cache directory that gets cleaned up after each test."""
-    temp_dir = tempfile.mkdtemp(prefix="plcache_test_")
-    yield temp_dir
-    shutil.rmtree(temp_dir, ignore_errors=True)
-
-
 @contextmanager
 def timer():
     start = time.time()
@@ -27,10 +19,10 @@ def timer():
 
 
 @mark.parametrize("wait", [0.01])
-def test_cache_performance_and_equality(temp_cache_dir, wait: float):
+def test_cache_performance_and_equality(tmp_path, wait: float):
     """Will be equal because `lazy=True` matches `LazyFrame` return type."""
 
-    @cache(cache_dir=temp_cache_dir, lazy=True)
+    @cache(cache_dir=tmp_path, lazy=True)
     def expensive_computation(n: int = 10) -> pl.LazyFrame:
         time.sleep(wait)
         return pl.LazyFrame().with_columns(
@@ -53,10 +45,10 @@ def test_cache_performance_and_equality(temp_cache_dir, wait: float):
 
 
 @mark.parametrize("wait", [0.01])
-def test_different_args_different_cache(temp_cache_dir, wait: float):
+def test_different_args_different_cache(tmp_path, wait: float):
     """Different arguments create separate cache entries."""
 
-    @cache(cache_dir=temp_cache_dir)
+    @cache(cache_dir=tmp_path)
     def compute(n: int) -> pl.DataFrame:
         time.sleep(wait)
         return pl.DataFrame({"value": [i for i in range(n)]})
@@ -70,4 +62,5 @@ def test_different_args_different_cache(temp_cache_dir, wait: float):
         df2 = compute(3)  # Different argument
     assert elapsed() >= wait
 
+    breakpoint()
     assert_frame_not_equal(df1, df2)
