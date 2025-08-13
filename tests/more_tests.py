@@ -8,12 +8,11 @@ from pytest import fixture
 from plcache import PolarsCache, cache
 
 
-def test_readable_cache_split_module_path(tmp_path):
-    """Test readable cache with split module path structure."""
+def test_split_module_path(tmp_path):
+    """Test cache with split module path structure."""
 
     @cache(
         cache_dir=tmp_path,
-        readable_cache=True,
         readable_dir_name="functions",
         split_module_path=True,
         symlink_filename="result.parquet",
@@ -43,12 +42,11 @@ def test_readable_cache_split_module_path(tmp_path):
     assert len(list(blob_dir.glob("*.parquet"))) == 1
 
 
-def test_readable_cache_flat_module_path(tmp_path):
-    """Test readable cache with flat module path structure."""
+def test_flat_module_path(tmp_path):
+    """Test cache with flat module path structure."""
 
     @cache(
         cache_dir=tmp_path,
-        readable_cache=True,
         split_module_path=False,
         symlink_filename="cached_data.parquet",
     )
@@ -71,8 +69,8 @@ def test_readable_cache_flat_module_path(tmp_path):
     assert expected_symlink.is_symlink()
 
 
-def test_readable_cache_custom_dir_name(tmp_path):
-    """Test readable cache with custom directory name."""
+def test_che_custom_dir_name(tmp_path):
+    """Test cache with custom directory name."""
 
     @cache(
         cache_dir=tmp_path,
@@ -98,10 +96,10 @@ def test_readable_cache_custom_dir_name(tmp_path):
     assert expected_symlink.exists()
 
 
-def test_readable_cache_with_kwargs(tmp_path):
-    """Test readable cache with function kwargs."""
+def test_cache_with_kwargs(tmp_path):
+    """Test cache with function kwargs."""
 
-    @cache(cache_dir=tmp_path, readable_cache=True, symlink_filename="data.parquet")
+    @cache(cache_dir=tmp_path, symlink_filename="data.parquet")
     def func_with_kwargs(a: int, b: str = "default") -> pl.DataFrame:
         return pl.DataFrame({"a": [a], "b": [b]})
 
@@ -121,28 +119,11 @@ def test_readable_cache_with_kwargs(tmp_path):
     assert expected_symlink.exists()
 
 
-def test_readable_cache_disabled(tmp_path):
-    """Test that disabling readable cache doesn't create symlinks."""
-
-    @cache(cache_dir=tmp_path, readable_cache=False)
-    def no_readable_func() -> pl.DataFrame:
-        return pl.DataFrame({"x": [1]})
-
-    result = no_readable_func()
-
-    # Should only have blobs and metadata, no readable structure
-    cache_path = Path(tmp_path)
-    assert (cache_path / "blobs").exists()
-    assert (cache_path / "metadata").exists()
-    assert not (cache_path / "functions").exists()
-
-
 def test_polars_cache_class_direct_usage(tmp_path):
     """Test using PolarsCache class directly with custom settings."""
 
     pc = PolarsCache(
         cache_dir=tmp_path,
-        readable_cache=True,
         readable_dir_name="cached_functions",
         split_module_path=True,
         symlink_filename="result.parquet",
@@ -171,7 +152,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
 def test_max_arg_length_truncation(tmp_path):
     """Test that long arguments get truncated in directory names."""
 
-    @cache(cache_dir=tmp_path, max_arg_length=10, readable_cache=True)
+    @cache(cache_dir=tmp_path, max_arg_length=10)
     def truncate_test(very_long_argument: str) -> pl.DataFrame:
         return pl.DataFrame({"result": [len(very_long_argument)]})
 
@@ -190,11 +171,7 @@ def test_max_arg_length_truncation(tmp_path):
 def test_symlink_points_to_correct_blob(tmp_path):
     """Test that symlinks point to the correct blob files."""
 
-    @cache(
-        cache_dir=tmp_path,
-        readable_cache=True,
-        symlink_filename="test_result.parquet",
-    )
+    @cache(cache_dir=tmp_path, symlink_filename="test_result.parquet")
     def symlink_test(value: int) -> pl.DataFrame:
         return pl.DataFrame({"value": [value]})
 
@@ -218,11 +195,11 @@ def test_symlink_points_to_correct_blob(tmp_path):
 def test_multiple_functions_separate_directories(tmp_path):
     """Test that different functions create separate directories."""
 
-    @cache(cache_dir=tmp_path, readable_cache=True)
+    @cache(cache_dir=tmp_path)
     def func_a() -> pl.DataFrame:
         return pl.DataFrame({"a": [1]})
 
-    @cache(cache_dir=tmp_path, readable_cache=True)
+    @cache(cache_dir=tmp_path)
     def func_b() -> pl.DataFrame:
         return pl.DataFrame({"b": [2]})
 
