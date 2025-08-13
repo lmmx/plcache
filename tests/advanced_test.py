@@ -17,7 +17,7 @@ def test_split_module_path(tmp_path):
     def test_func(n: int) -> pl.DataFrame:
         return pl.DataFrame({"data": [n]})
 
-    result = test_func(42)
+    _ = test_func(42)
 
     # Check structure: cache_dir/functions/module_name/function_name/args/result.parquet
     cache_path = Path(tmp_path)
@@ -50,7 +50,7 @@ def test_flat_module_path(tmp_path):
     def another_func(value: str) -> pl.DataFrame:
         return pl.DataFrame({"text": [value]})
 
-    result = another_func("hello")
+    _ = another_func("hello")
 
     # Check structure: cache_dir/functions/full_qualname/args/cached_data.parquet
     cache_path = Path(tmp_path)
@@ -77,7 +77,7 @@ def test_che_custom_dir_name(tmp_path):
     def custom_func() -> pl.DataFrame:
         return pl.DataFrame({"col": [1, 2, 3]})
 
-    result = custom_func()
+    _ = custom_func()
 
     # Check custom directory name
     cache_path = Path(tmp_path)
@@ -100,7 +100,7 @@ def test_cache_with_kwargs(tmp_path):
     def func_with_kwargs(a: int, b: str = "default") -> pl.DataFrame:
         return pl.DataFrame({"a": [a], "b": [b]})
 
-    result = func_with_kwargs(10, b="test")
+    _ = func_with_kwargs(10, b="test")
 
     # Check args directory includes kwargs
     cache_path = Path(tmp_path)
@@ -133,7 +133,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
 
     # Test with a long argument that should be truncated
     long_arg = "this_is_a_very_long_string_that_should_be_truncated"
-    result = class_test_func(long_arg)
+    _ = class_test_func(long_arg)
 
     cache_path = Path(tmp_path)
 
@@ -153,7 +153,7 @@ def test_max_arg_length_truncation(tmp_path):
     def truncate_test(very_long_argument: str) -> pl.DataFrame:
         return pl.DataFrame({"result": [len(very_long_argument)]})
 
-    result = truncate_test("this_argument_is_very_long_and_should_be_truncated")
+    _ = truncate_test("this_argument_is_very_long_and_should_be_truncated")
 
     # Find the created directory
     cache_path = Path(tmp_path)
@@ -200,8 +200,8 @@ def test_multiple_functions_separate_directories(tmp_path):
     def func_b() -> pl.DataFrame:
         return pl.DataFrame({"b": [2]})
 
-    result_a = func_a()
-    result_b = func_b()
+    _ = func_a()
+    _ = func_b()
 
     # Check separate directories were created
     cache_path = Path(tmp_path)
