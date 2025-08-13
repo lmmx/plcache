@@ -241,11 +241,12 @@ class PolarsCache:
 
         # Build the readable path structure
         if self.split_module_path:
-            # Split: readable_dir/module_name/func_qualname/args/
+            # Split: readable_dir/encoded_module/encoded_qualname/args/
             encoded_module = urllib.parse.quote(module_name, safe="")
-            readable_path = self.readable_dir / encoded_module / func_qualname
+            encoded_qualname = urllib.parse.quote(func_qualname, safe="")
+            readable_path = self.readable_dir / encoded_module / encoded_qualname
         else:
-            # Flat: readable_dir/full_qualname/args/
+            # Flat: readable_dir/encoded_full_qualname/args/
             full_qualname = f"{module_name}.{func_qualname}"
             encoded_qualname = urllib.parse.quote(full_qualname, safe="")
             readable_path = self.readable_dir / encoded_qualname
