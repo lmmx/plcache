@@ -1,22 +1,6 @@
-lint: ty flake
-precommit: tidy
-
-flake:
-   flake8 src/plcache --max-line-length=88 --extend-ignore=E203,E501,
-
-ty *args:
-   #!/usr/bin/env bash
-   ty check {{args}} 2> >(grep -v "WARN ty is pre-release software" >&2)
-
-t:
-   just ty --output-format=concise
-
-fmt: ruff taplo-fix eof-fix
-
-tidy: taplo-check eof-check
-
-ruff:
-   ruff format src/plcache
+lint: ty flake ruff-check
+precommit: fmt taplo-check eof-check
+fmt: ruff-fmt taplo-fix eof-fix
 
 setup:
    uv venv
@@ -25,6 +9,22 @@ setup:
 
 test:
    $(uv python find) -m pytest tests
+
+ty *args:
+   #!/usr/bin/env bash
+   ty check {{args}} 2> >(grep -v "WARN ty is pre-release software" >&2)
+
+t:
+   just ty --output-format=concise
+
+flake:
+   flake8 src/plcache --max-line-length=88 --extend-ignore=E203,E501,
+
+ruff-check:
+   ruff check .
+
+ruff-fmt:
+   ruff format .
 
 taplo-check:
     taplo lint

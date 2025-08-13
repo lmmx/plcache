@@ -1,15 +1,13 @@
-import shutil
-import tempfile
 import time
 from contextlib import contextmanager
 
 import polars as pl
 from polars.testing import assert_frame_equal, assert_frame_not_equal
-from pytest import fixture, mark
+from pytest import mark
 
 from plcache import cache
 
-BRIEF_WAIT = 0.01  # Cannot go lower without actual computation being longer
+BRIEF_WAIT = 0.1  # Cannot go below 0.01 without actual computation being longer
 
 
 @contextmanager
@@ -18,11 +16,11 @@ def timer():
     yield lambda: time.time() - start
 
 
-@mark.parametrize("wait", [0.01])
+@mark.parametrize("wait", [BRIEF_WAIT])
 def test_cache_performance_and_equality(tmp_path, wait: float):
     """Will be equal because `lazy=True` matches `LazyFrame` return type."""
 
-    @cache(cache_dir=tmp_path, lazy=True)
+    @cache(cache_dir=tmp_path)
     def expensive_computation(n: int = 10) -> pl.LazyFrame:
         time.sleep(wait)
         return pl.LazyFrame().with_columns(
@@ -34,6 +32,7 @@ def test_cache_performance_and_equality(tmp_path, wait: float):
     # First call: slow
     with timer() as elapsed:
         df1 = expensive_computation(10)
+
     assert elapsed() >= wait
 
     # Second call: fast
@@ -44,7 +43,7 @@ def test_cache_performance_and_equality(tmp_path, wait: float):
     assert_frame_equal(df1, df2)
 
 
-@mark.parametrize("wait", [0.01])
+@mark.parametrize("wait", [BRIEF_WAIT])
 def test_different_args_different_cache(tmp_path, wait: float):
     """Different arguments create separate cache entries."""
 
@@ -62,5 +61,4 @@ def test_different_args_different_cache(tmp_path, wait: float):
         df2 = compute(3)  # Different argument
     assert elapsed() >= wait
 
-    breakpoint()
     assert_frame_not_equal(df1, df2)

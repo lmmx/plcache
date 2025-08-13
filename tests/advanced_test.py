@@ -1,9 +1,6 @@
-import shutil
-import tempfile
 from pathlib import Path
 
 import polars as pl
-from pytest import fixture
 
 from plcache import PolarsCache, cache
 
@@ -15,7 +12,7 @@ def test_split_module_path(tmp_path):
         cache_dir=tmp_path,
         readable_dir_name="functions",
         split_module_path=True,
-        symlink_filename="result.parquet",
+        symlink_name="result.parquet",
     )
     def test_func(n: int) -> pl.DataFrame:
         return pl.DataFrame({"data": [n]})
@@ -48,7 +45,7 @@ def test_flat_module_path(tmp_path):
     @cache(
         cache_dir=tmp_path,
         split_module_path=False,
-        symlink_filename="cached_data.parquet",
+        symlink_name="cached_data.parquet",
     )
     def another_func(value: str) -> pl.DataFrame:
         return pl.DataFrame({"text": [value]})
@@ -75,7 +72,7 @@ def test_che_custom_dir_name(tmp_path):
     @cache(
         cache_dir=tmp_path,
         readable_dir_name="my_cache",
-        symlink_filename="output.parquet",
+        symlink_name="output.parquet",
     )
     def custom_func() -> pl.DataFrame:
         return pl.DataFrame({"col": [1, 2, 3]})
@@ -99,7 +96,7 @@ def test_che_custom_dir_name(tmp_path):
 def test_cache_with_kwargs(tmp_path):
     """Test cache with function kwargs."""
 
-    @cache(cache_dir=tmp_path, symlink_filename="data.parquet")
+    @cache(cache_dir=tmp_path, symlink_name="data.parquet")
     def func_with_kwargs(a: int, b: str = "default") -> pl.DataFrame:
         return pl.DataFrame({"a": [a], "b": [b]})
 
@@ -126,7 +123,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
         cache_dir=tmp_path,
         readable_dir_name="cached_functions",
         split_module_path=True,
-        symlink_filename="result.parquet",
+        symlink_name="result.parquet",
         max_arg_length=20,
     )
 
@@ -146,7 +143,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
 
     # Verify the directory name contains truncated argument
     symlink_parent = symlinks[0].parent.name
-    assert "this_is_a_very_long_s" in symlink_parent  # 20 chars
+    assert "this_is_a_very_long_" in symlink_parent  # 20 chars
 
 
 def test_max_arg_length_truncation(tmp_path):
@@ -171,7 +168,7 @@ def test_max_arg_length_truncation(tmp_path):
 def test_symlink_points_to_correct_blob(tmp_path):
     """Test that symlinks point to the correct blob files."""
 
-    @cache(cache_dir=tmp_path, symlink_filename="test_result.parquet")
+    @cache(cache_dir=tmp_path, symlink_name="test_result.parquet")
     def symlink_test(value: int) -> pl.DataFrame:
         return pl.DataFrame({"value": [value]})
 

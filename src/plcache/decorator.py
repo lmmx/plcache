@@ -6,16 +6,19 @@ import os
 import tempfile
 import urllib.parse
 from pathlib import Path
-from types import FunctionType
-from typing import TYPE_CHECKING, Callable, Union, overload
+from typing import TYPE_CHECKING, overload
 
 import diskcache
 import polars as pl
 
-if TYPE_CHECKING:
-    from ty_extensions import Intersection
+from ._debugging import snoop
 
-    CallableFn = Intersection[FunctionType, Callable[[], None]]
+if TYPE_CHECKING:
+    from .types import CallableFn
+
+_GB = 2**30
+
+_DEFAULT_SYMLINK_NAME = "output.parquet"
 
 
 class PolarsCache:
@@ -24,31 +27,39 @@ class PolarsCache:
     def __init__(
         self,
         cache_dir: str | None = None,
-        size_limit: int = 2**30,  # 1GB default
+        use_tmp: bool = False,
+        hidden: bool = True,
+        size_limit: int = 1 * _GB,
         readable_dir_name: str = "functions",
         split_module_path: bool = True,
         max_arg_length: int = 50,
-        symlink_filename: str | None = None,
+        symlink_name: str | None = None,
     ):
         """
         Initialise the cache.
 
         Args:
-            cache_dir: Directory for cache storage. If None, uses system temp directory.
-            size_limit: Maximum cache size in bytes.
-            readable_dir_name: Name of the readable directory ("functions", "cache", etc.).
+            cache_dir: Directory for cache storage. If None, uses current working directory.
+            use_tmp: If True and cache_dir is None, put cache dir in system temp directory.
+            hidden: If True, prefix directory name with dot (e.g. '.polars_cache').
+            size_limit: Maximum cache size in bytes. Default: 1GB (`2**30`).
+            readable_dir_name: Name of the readable directory. Default: "functions".
             split_module_path: If True, split module.function into module/function dirs.
-                              If False, use encoded full qualname as single dir.
+                               If False, use percent-encoded function qualname as single dir.
             max_arg_length: Maximum length for argument values in directory names.
         """
         if cache_dir is None:
-            cache_dir = os.path.join(tempfile.gettempdir(), "polars_cache")
+            dir_name = ".polars_cache" if hidden else "polars_cache"
+            if use_tmp:
+                cache_dir = Path(tempfile.gettempdir()) / dir_name
+            else:
+                cache_dir = Path.cwd() / dir_name
 
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
 
         # Configuration
-        self.symlink_filename = symlink_filename
+        self.symlink_name = symlink_name
         self.readable_dir_name = readable_dir_name
         self.split_module_path = split_module_path
         self.max_arg_length = max_arg_length
@@ -66,13 +77,18 @@ class PolarsCache:
         self.readable_dir = self.cache_dir / self.readable_dir_name
         self.readable_dir.mkdir(exist_ok=True)
 
-    def _get_cache_key(self, func_name: str, args: tuple, kwargs: dict) -> str:
+    def _get_cache_key(
+        self,
+        func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
+        args: tuple,
+        kwargs: dict,
+    ) -> str:
         """Generate a cache key from function name and arguments."""
         # Create a string representation of the function call
-        call_str = f"{func_name}({args}, {kwargs})"
-
+        ident = f"{func.__module__}.{func.__qualname__}({args}, {kwargs})"
         # Hash it to get a consistent key
-        return hashlib.sha256(call_str.encode()).hexdigest()
+        cache_key = hashlib.sha256(ident.encode()).hexdigest()
+        return cache_key
 
     def _get_parquet_path(self, cache_key: str) -> Path:
         """Get the parquet file path for a cache key (in blobs directory)."""
@@ -117,7 +133,7 @@ class PolarsCache:
         readable_dir_name: str | None = None,
         split_module_path: bool | None = None,
         max_arg_length: int | None = None,
-        lazy: bool | None = None,
+        symlink_name: str | None = None,
     ):
         """
         Decorator for caching Polars DataFrames and LazyFrames.
@@ -141,14 +157,17 @@ class PolarsCache:
         use_max_arg_len = (
             max_arg_length if max_arg_length is not None else self.max_arg_length
         )
+        use_symlink_name = (
+            symlink_name if symlink_name is not None else self.symlink_name
+        )
 
         def decorator(
-            func: CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]],
-        ) -> CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]]:
+            func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
+        ) -> CallableFn[..., pl.DataFrame | pl.LazyFrame]:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 # Generate cache key
-                cache_key = self._get_cache_key(func.__name__, args, kwargs)
+                cache_key = self._get_cache_key(func, args, kwargs)
 
                 # Check if result is cached
                 if cache_key in self.cache:
@@ -181,10 +200,12 @@ class PolarsCache:
                     old_dir_name = self.readable_dir_name
                     old_split = self.split_module_path
                     old_max_arg = self.max_arg_length
+                    old_symlink_name = self.symlink_name
 
                     self.readable_dir_name = use_dir_name
                     self.split_module_path = use_split_module
                     self.max_arg_length = use_max_arg_len
+                    self.symlink_name = use_symlink_name
 
                     try:
                         self._create_readable_symlink(
@@ -195,6 +216,7 @@ class PolarsCache:
                         self.readable_dir_name = old_dir_name
                         self.split_module_path = old_split
                         self.max_arg_length = old_max_arg
+                        self.symlink_name = old_symlink_name
 
                     return result
 
@@ -206,7 +228,7 @@ class PolarsCache:
 
     def _create_readable_symlink(
         self,
-        func: CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]],
+        func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
         args: tuple,
         kwargs: dict,
         cache_key: str,
@@ -245,13 +267,10 @@ class PolarsCache:
         final_readable_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine filename based on result type
-        if isinstance(result, pl.LazyFrame):
-            symlink_filename = "lazy.parquet"
-        else:
-            symlink_filename = "data.parquet"
+        symlink_name = self.symlink_name or _DEFAULT_SYMLINK_NAME
 
         # Create symlink
-        symlink_path = final_readable_dir / symlink_filename
+        symlink_path = final_readable_dir / symlink_name
         blob_path = self.parquet_dir / f"{cache_key}.parquet"
 
         # Create relative path for symlink
@@ -293,36 +312,41 @@ class _DummyCache:
 _global_cache: PolarsCache | _DummyCache = _DummyCache()
 
 
+@snoop()
 def cache(
     cache_dir: str | None = None,
-    size_limit: int = 2**30,
+    use_tmp: bool = False,
+    hidden: bool = True,
+    size_limit: int = 1 * _GB,
     readable_dir_name: str = "functions",
     split_module_path: bool = True,
     max_arg_length: int = 50,
-    lazy: bool | None = None,
-    symlink_filename: str | None = None,
+    symlink_name: str | None = None,
 ):
     """
     Convenience decorator for caching Polars DataFrames and LazyFrames.
 
     Args:
         cache_dir: Directory for cache storage. If None, uses system temp directory.
-        size_limit: Maximum cache size in bytes.
+        size_limit: Maximum cache size in bytes. Default: 1GB (`2 ** 30`).
         readable_dir_name: Name of the readable directory ("functions", "cache", etc.).
         split_module_path: If True, split module.function into module/function dirs.
                           If False, use encoded full qualname as single dir.
         max_arg_length: Maximum length for argument values in directory names.
     """
     global _global_cache
+    uncached = isinstance(_global_cache, _DummyCache)
 
     # Create new cache if we're still using the dummy (first call to `cache()`)
-    if isinstance(_global_cache, _DummyCache):
+    if uncached or (
+        cache_dir is not None and Path(_global_cache.cache_dir) != Path(cache_dir)
+    ):
         _global_cache = PolarsCache(
             cache_dir=cache_dir,
             size_limit=size_limit,
             readable_dir_name=readable_dir_name,
             split_module_path=split_module_path,
-            symlink_filename=symlink_filename,
+            symlink_name=symlink_name,
             max_arg_length=max_arg_length,
         )
 
@@ -330,6 +354,7 @@ def cache(
         readable_dir_name=readable_dir_name,
         split_module_path=split_module_path,
         max_arg_length=max_arg_length,
+        symlink_name=symlink_name,
     )
 
 
@@ -340,7 +365,7 @@ if __name__ == "__main__":
         cache_dir="/tmp/my_polars_cache",
         readable_dir_name="cached_functions",
         split_module_path=True,
-        symlink_filename="result.parquet",
+        symlink_name="result.parquet",
     )
 
     @pc.cache_polars()
@@ -350,7 +375,7 @@ if __name__ == "__main__":
             {"a": list(range(rows)), "b": [i * 10 for i in range(rows)]}
         )
 
-    @pc.cache_polars(lazy=True)
+    @pc.cache_polars()
     def process_data(multiplier: int = 2) -> pl.LazyFrame:
         print(f"Processing data with multiplier {multiplier}...")
         return (
@@ -364,8 +389,7 @@ if __name__ == "__main__":
         cache_dir="/tmp/another_cache",
         readable_dir_name="by_function",
         split_module_path=False,  # Flat structure
-        symlink_filename="cached_output.parquet",
-        lazy=False,
+        symlink_name="cached_output.parquet",
     )
     def get_sample_data(size: int = 3, prefix: str = "test") -> pl.LazyFrame:
         print(f"Generating sample data: size={size}, prefix={prefix}")
