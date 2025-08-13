@@ -12,3 +12,8 @@ t:
 
 fmt:
    ruff format src/plcache
+
+setup:
+   uv venv
+   source .venv/bin/activate
+   uv pip install -e .

@@ -22,4 +22,5 @@ build-backend = "pdm.backend"
 [dependency-groups]
 dev = [
     "polars>=1.32.2",
+    "pytest>=8.4.1",
 ]
