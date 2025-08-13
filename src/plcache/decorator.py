@@ -80,61 +80,6 @@ class PolarsCache:
         """Get the parquet file path for a cache key (in blobs directory)."""
         return self.parquet_dir / f"{cache_key}.parquet"
 
-    def _create_readable_symlink(
-        self,
-        func: CallableFn[..., Union[pl.DataFrame, pl.LazyFrame]],
-        args: tuple,
-        kwargs: dict,
-        cache_key: str,
-    ):
-        """Create a readable symlink structure pointing to the blob."""
-        if not self.readable_cache:
-            return
-
-        # Get module and function info
-        module_name = func.__module__
-        func_qualname = func.__qualname__
-
-        # Build the readable path structure
-        if self.split_module_path:
-            # Split: module_name/func_qualname/args/
-            encoded_module = urllib.parse.quote(module_name, safe="")
-            readable_path = self.readable_dir / encoded_module / func_qualname
-        else:
-            # Flat: full_qualname/args/
-            full_qualname = f"{module_name}.{func_qualname}"
-            encoded_qualname = urllib.parse.quote(full_qualname, safe="")
-            readable_path = self.readable_dir / encoded_qualname
-
-        # Create args directory name
-        args_parts = []
-        for i, arg in enumerate(args):
-            arg_str = str(arg)[: self.max_arg_length]
-            encoded_arg = urllib.parse.quote(arg_str, safe="")
-            args_parts.append(f"arg{i}={encoded_arg}")
-
-        for key, value in kwargs.items():
-            value_str = str(value)[: self.max_arg_length]
-            encoded_value = urllib.parse.quote(value_str, safe="")
-            args_parts.append(f"{key}={encoded_value}")
-
-        args_dir_name = "_".join(args_parts) if args_parts else "no_args"
-        final_readable_dir = readable_path / args_dir_name
-        final_readable_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create symlink
-        symlink_path = final_readable_dir / self.symlink_filename
-        blob_path = self.parquet_dir / f"{cache_key}.parquet"
-
-        # Create relative path for symlink
-        try:
-            relative_blob = os.path.relpath(blob_path, final_readable_dir)
-            if not symlink_path.exists():
-                symlink_path.symlink_to(relative_blob)
-        except (OSError, FileExistsError):
-            # Symlink creation failed, but that's okay - cache still works
-            pass
-
     def _save_polars_result(
         self, result: pl.DataFrame | pl.LazyFrame, cache_key: str
     ) -> str:
