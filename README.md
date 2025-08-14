@@ -74,7 +74,7 @@ Human-readable symlinks are created at `{cache_dir}/functions/module/function/ar
 
 plcache creates an organised, browsable cache structure with two layout options:
 
-**Split** module path (default: `split_module_path=True`) organises cache by separate module and function directories:
+**Nested** module path (default: `nested=True`) organises cache by separate module and function directories:
 
 ```
 .polars_cache/
@@ -91,7 +91,7 @@ plcache creates an organised, browsable cache structure with two layout options:
                 └── output.parquet -> ../../../blobs/e5f6g7h8.parquet
 ```
 
-**Flat** module path (`split_module_path=False`) uses encoded full module.function names in a single directory level:
+**Flat** module path (`nested=False`) uses encoded full module.function names in a single directory level:
 
 ```
 .polars_cache/
@@ -142,10 +142,10 @@ def analytics_function(): ...
 def load_data(): ...
 
 # Choose layout style
-@cache(split_module_path=True)   # module/function/ (default)
+@cache(nested=True)   # module/function/ (default)
 def split_example(): ...
 
-@cache(split_module_path=False)  # module.function/ (flat)
+@cache(nested=False)  # module.function/ (flat)
 def flat_example(): ...
 ```
 
@@ -173,7 +173,7 @@ def data_processor(): ...
     hidden=True,                        # Prefix with dot (default)
     size_limit=2**30,                   # Max cache size (1GB default)
     symlinks_dir="functions",           # Readable directory name
-    split_module_path=True,             # Module/function vs flat layout
+    nested=True,                        # Module/function vs flat layout
     max_arg_length=50,                  # Max argument length in paths
     symlink_name="output.parquet"       # Custom symlink filename
 )
@@ -193,7 +193,7 @@ from plcache import PolarsCache
 my_cache = PolarsCache(
     cache_dir="./analysis_cache",
     symlinks_dir="experiments",
-    split_module_path=True,
+    nested=True,
     symlink_name="experiment_result.parquet"
 )
 

@@ -22,8 +22,8 @@ Tests various configuration parameters and their effects on cache behavior.
 ### `directory_structure_test.py` - Directory Layout Patterns
 Tests how the cache organises files and directories in different structural modes.
 
-- **`test_split_module_path`**: Verifies `split_module_path=True` creates structure like `functions/module_name/function_name/args/`
-- **`test_flat_module_path`**: Verifies `split_module_path=False` creates structure like `functions/full_qualified_name/args/`
+- **`test_nested`**: Verifies `nested=True` creates structure like `functions/module_name/function_name/args/`
+- **`test_flat_module_path`**: Verifies `nested=False` creates structure like `functions/full_qualified_name/args/`
 - **`test_multiple_functions_separate_directories`**: Ensures different functions create separate directory hierarchies
 
 ### `symlinks_test.py` - Symlink Functionality

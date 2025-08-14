@@ -18,7 +18,7 @@ def demonstrate_split_vs_flat():
     @cache(
         cache_dir="./example_cache_split",
         symlinks_dir="functions",
-        split_module_path=True,
+        nested=True,
         symlink_name="result.parquet",
     )
     def split_example(value: int) -> pl.DataFrame:
@@ -28,7 +28,7 @@ def demonstrate_split_vs_flat():
     @cache(
         cache_dir="./example_cache_flat",
         symlinks_dir="functions",
-        split_module_path=False,
+        nested=False,
         symlink_name="result.parquet",
     )
     def flat_example(value: int) -> pl.DataFrame:
@@ -59,7 +59,7 @@ def demonstrate_class_usage():
     my_cache = PolarsCache(
         cache_dir="./my_custom_cache",
         symlinks_dir="analytics_cache",
-        split_module_path=True,
+        nested=True,
         max_arg_length=20,  # Truncate long arguments
         symlink_name="data.parquet",
     )
@@ -100,7 +100,7 @@ def demonstrate_custom_configurations():
     @cache(
         cache_dir="./science_cache",
         symlinks_dir="experiments",
-        split_module_path=True,
+        nested=True,
         max_arg_length=15,
         symlink_name="experiment_data.parquet",
     )
@@ -125,7 +125,7 @@ def demonstrate_custom_configurations():
     @cache(
         cache_dir="./analytics_cache",
         symlinks_dir="reports",
-        split_module_path=False,  # Flat structure for simpler browsing
+        nested=False,  # Flat structure for simpler browsing
         max_arg_length=30,
         symlink_name="report.parquet",
     )

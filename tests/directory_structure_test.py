@@ -5,13 +5,13 @@ import polars as pl
 from plcache import cache
 
 
-def test_split_module_path(tmp_path):
+def test_nested(tmp_path):
     """Test cache with split module path structure."""
 
     @cache(
         cache_dir=tmp_path,
         symlinks_dir="functions",
-        split_module_path=True,
+        nested=True,
         symlink_name="result.parquet",
     )
     def test_func(n: int) -> pl.DataFrame:
@@ -21,9 +21,7 @@ def test_split_module_path(tmp_path):
 
     # Get the actual module and qualname from the function
     module_name = test_func.__module__  # Will be "tests.advanced_test" or similar
-    func_qualname = (
-        test_func.__qualname__
-    )  # Will be "test_split_module_path.<locals>.test_func"
+    func_qualname = test_func.__qualname__  # Will be "test_nested.<locals>.test_func"
 
     # Apply the same encoding as the implementation
     import urllib.parse
@@ -56,7 +54,7 @@ def test_flat_module_path(tmp_path):
 
     @cache(
         cache_dir=tmp_path,
-        split_module_path=False,
+        nested=False,
         symlink_name="cached_data.parquet",
     )
     def another_func(value: str) -> pl.DataFrame:

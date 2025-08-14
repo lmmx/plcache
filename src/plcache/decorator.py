@@ -31,7 +31,7 @@ class PolarsCache:
         hidden: bool = True,
         size_limit: int = 1 * _GB,
         symlinks_dir: str = "functions",
-        split_module_path: bool = True,
+        nested: bool = True,
         max_arg_length: int = 50,
         symlink_name: str | None = None,
     ):
@@ -44,8 +44,8 @@ class PolarsCache:
             hidden: If True, prefix directory name with dot (e.g. '.polars_cache').
             size_limit: Maximum cache size in bytes. Default: 1GB (`2**30`).
             symlinks_dir: Name of the readable directory. Default: "functions".
-            split_module_path: If True, split module.function into module/function dirs.
-                               If False, use percent-encoded function qualname as single dir.
+            nested: If True, split module.function into module/function dirs.
+                    If False, use percent-encoded function qualname as single dir.
             max_arg_length: Maximum length for argument values in directory names.
         """
         if cache_dir is None:
@@ -61,7 +61,7 @@ class PolarsCache:
         # Configuration
         self.symlink_name = symlink_name
         self.symlinks_dir_name = symlinks_dir
-        self.split_module_path = split_module_path
+        self.nested = nested
         self.max_arg_length = max_arg_length
 
         # Use diskcache for metadata (function calls -> parquet file paths)
@@ -131,7 +131,7 @@ class PolarsCache:
     def cache_polars(
         self,
         symlinks_dir: str | None = None,
-        split_module_path: bool | None = None,
+        nested: bool | None = None,
         max_arg_length: int | None = None,
         symlink_name: str | None = None,
     ):
@@ -140,18 +140,14 @@ class PolarsCache:
 
         Args:
             symlinks_dir: Override instance setting for readable directory name.
-            split_module_path: Override instance setting for module path splitting.
+            nested: Override instance setting for module path splitting.
             max_arg_length: Override instance setting for max argument length.
         """
         # Use instance defaults if not overridden
         use_dir_name = (
             symlinks_dir if symlinks_dir is not None else self.symlinks_dir_name
         )
-        use_split_module = (
-            split_module_path
-            if split_module_path is not None
-            else self.split_module_path
-        )
+        use_split_module = nested if nested is not None else self.nested
         use_max_arg_len = (
             max_arg_length if max_arg_length is not None else self.max_arg_length
         )
@@ -196,12 +192,12 @@ class PolarsCache:
                     # Create readable symlink
                     # Temporarily override instance settings for this call
                     old_dir_name = self.symlinks_dir_name
-                    old_split = self.split_module_path
+                    old_split = self.nested
                     old_max_arg = self.max_arg_length
                     old_symlink_name = self.symlink_name
 
                     self.symlinks_dir_name = use_dir_name
-                    self.split_module_path = use_split_module
+                    self.nested = use_split_module
                     self.max_arg_length = use_max_arg_len
                     self.symlink_name = use_symlink_name
 
@@ -212,7 +208,7 @@ class PolarsCache:
                     finally:
                         # Restore instance settings
                         self.symlinks_dir_name = old_dir_name
-                        self.split_module_path = old_split
+                        self.nested = old_split
                         self.max_arg_length = old_max_arg
                         self.symlink_name = old_symlink_name
 
@@ -238,7 +234,7 @@ class PolarsCache:
         func_qualname = func.__qualname__
 
         # Build the readable path structure
-        if self.split_module_path:
+        if self.nested:
             # Split: readable_dir/encoded_module/encoded_qualname/args/
             encoded_module = urllib.parse.quote(module_name, safe="")
             encoded_qualname = urllib.parse.quote(func_qualname, safe="")
@@ -318,7 +314,7 @@ def cache(
     hidden: bool = True,
     size_limit: int = 1 * _GB,
     symlinks_dir: str = "functions",
-    split_module_path: bool = True,
+    nested: bool = True,
     max_arg_length: int = 50,
     symlink_name: str | None = None,
 ):
@@ -329,7 +325,7 @@ def cache(
         cache_dir: Directory for cache storage. If None, uses system temp directory.
         size_limit: Maximum cache size in bytes. Default: 1GB (`2 ** 30`).
         symlinks_dir: Name of the readable directory ("functions", "cache", etc.).
-        split_module_path: If True, split module.function into module/function dirs.
+        nested: If True, split module.function into module/function dirs.
                           If False, use encoded full qualname as single dir.
         max_arg_length: Maximum length for argument values in directory names.
     """
@@ -344,14 +340,14 @@ def cache(
             cache_dir=cache_dir,
             size_limit=size_limit,
             symlinks_dir=symlinks_dir,
-            split_module_path=split_module_path,
+            nested=nested,
             symlink_name=symlink_name,
             max_arg_length=max_arg_length,
         )
 
     return _global_cache.cache_polars(
         symlinks_dir=symlinks_dir,
-        split_module_path=split_module_path,
+        nested=nested,
         max_arg_length=max_arg_length,
         symlink_name=symlink_name,
     )
