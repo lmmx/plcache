@@ -49,9 +49,11 @@ fix-eof-ws mode="":
     whitespace-format --add-new-line-marker-at-end-of-file \
           --new-line-marker=linux \
           --normalize-new-line-markers \
-          --exclude ".git/|.*cache/|.pdm-build|.venv/|site/|.json$|.lock|.sw[op]|.png|.jpg$" \
+          --exclude ".git/|.*cache/|.db|.parquet|.pdm-build|.venv/|site/|.json$|.lock|.sw[op]|.png|.jpg$" \
           $ARGS \
           .
+
+examples: example-basic example-advanced example-perf
 
 [working-directory: 'examples/basic']
 example-basic:

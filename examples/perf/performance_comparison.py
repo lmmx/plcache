@@ -8,7 +8,7 @@ cached vs uncached function execution times.
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Generator
+from collections.abc import Generator
 
 import polars as pl
 from polars.testing import assert_frame_equal
@@ -17,7 +17,7 @@ from plcache import cache
 
 
 @contextmanager
-def timer() -> Generator[Callable, None, None]:
+def timer() -> Generator[Callable]:
     """Context manager to measure execution time."""
     start = time.time()
     yield lambda: time.time() - start
@@ -110,7 +110,7 @@ def compare_basic_performance():
             result = expensive_data_operation(n_rows, delay)
         time_taken = elapsed()
         uncached_times.append(time_taken)
-        print(f"   Run {i+1}: {time_taken:.3f}s ({len(result)} rows)")
+        print(f"   Run {i + 1}: {time_taken:.3f}s ({len(result)} rows)")
 
     avg_uncached = sum(uncached_times) / len(uncached_times)
     print(f"   Average uncached time: {avg_uncached:.3f}s")
@@ -132,7 +132,7 @@ def compare_basic_performance():
             result = cached_data_operation(n_rows, delay)
         time_taken = elapsed()
         cached_times.append(time_taken)
-        print(f"   Call {i+2} (hit): {time_taken:.3f}s ({len(result)} rows)")
+        print(f"   Call {i + 2} (hit): {time_taken:.3f}s ({len(result)} rows)")
 
     # Calculate speedup
     cache_hit_avg = sum(cached_times[1:]) / len(cached_times[1:])
