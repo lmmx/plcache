@@ -1,7 +1,6 @@
 # tests/conftest.py
 
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -40,7 +39,7 @@ def cleanup_polars_cache():
     # Reset global cache to dummy state AFTER all tests
     try:
         import plcache.decorator
-        from plcache.decorator import _DummyCache, _global_cache
+        from plcache.decorator import _DummyCache
 
         plcache.decorator._global_cache = _DummyCache()
     except ImportError:
