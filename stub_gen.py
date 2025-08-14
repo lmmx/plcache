@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Build script for creating portable virtual environments for CI/CD."""
+
 import hashlib
 import os
 import re
@@ -56,6 +58,8 @@ DEBUG = os.getenv("DEBUG_PYSNOOPER", False)
 if TYPE_CHECKING or not DEBUG:
 
     def snoop():
+        """Dummy replacement to pysnooper.snoop when debugging is off."""
+
         def decorator(func):
             return func
 
@@ -74,6 +78,7 @@ def handle_subprocess_error(error: subprocess.CalledProcessError, message: str):
 
 @snoop()
 def main():
+    """Main build function for creating portable virtual environments."""
     for dir_path in (CI_DIR, CHECKSUM_DIR):
         dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -98,7 +103,7 @@ def main():
     ).hexdigest()
 
     def human_size(size_bytes):
-        """Get human-readable byte size"""
+        """Get human-readable byte size."""
         for unit in ["B", "K", "M", "G"]:
             if size_bytes < 1024:
                 return (

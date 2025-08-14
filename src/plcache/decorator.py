@@ -1,3 +1,5 @@
+"""Caching decorator implementation for Polars DataFrames and LazyFrames."""
+
 from __future__ import annotations
 
 import functools
@@ -34,8 +36,7 @@ class PolarsCache:
         trim_arg: int = 50,
         symlink_name: str | None = None,
     ):
-        """
-        Initialise the cache.
+        """Initialise the cache.
 
         Args:
             cache_dir: Directory for cache storage. If None, uses current working directory.
@@ -46,6 +47,7 @@ class PolarsCache:
             nested: If True, split module.function into module/function dirs.
                     If False, use percent-encoded function qualname as single dir.
             trim_arg: Maximum length for argument values in directory names.
+            symlink_name: Custom name for symlink files. If None, uses "output.parquet".
         """
         if cache_dir is None:
             dir_name = ".polars_cache" if hidden else "polars_cache"
@@ -82,7 +84,19 @@ class PolarsCache:
         args: tuple,
         kwargs: dict,
     ) -> str:
-        """Generate a cache key from function name and arguments."""
+        """Generate a cache key from function name and arguments.
+
+        Creates a unique hash-based key by combining the function's module path,
+        qualname, and all arguments to ensure cache hits only occur for identical calls.
+
+        Args:
+            func: The function being cached.
+            args: Positional arguments passed to the function.
+            kwargs: Keyword arguments passed to the function.
+
+        Returns:
+            A SHA256 hash string representing the unique cache key.
+        """
         # Create a string representation of the function call
         ident = f"{func.__module__}.{func.__qualname__}({args}, {kwargs})"
         # Hash it to get a consistent key
@@ -90,13 +104,31 @@ class PolarsCache:
         return cache_key
 
     def _get_parquet_path(self, cache_key: str) -> Path:
-        """Get the parquet file path for a cache key (in blobs directory)."""
+        """Get the parquet file path for a cache key (in blobs directory).
+
+        Args:
+            cache_key: The unique cache key for the cached result.
+
+        Returns:
+            Path object pointing to the parquet file location in the blobs directory.
+        """
         return self.parquet_dir / f"{cache_key}.parquet"
 
     def _save_polars_result(
         self, result: pl.DataFrame | pl.LazyFrame, cache_key: str
     ) -> str:
-        """Save a Polars DataFrame or LazyFrame to parquet and return the path."""
+        """Save a Polars DataFrame or LazyFrame to parquet and return the path.
+
+        Args:
+            result: The Polars DataFrame or LazyFrame to save.
+            cache_key: The unique cache key for this result.
+
+        Returns:
+            String path to the saved parquet file.
+
+        Raises:
+            TypeError: If result is not a DataFrame or LazyFrame.
+        """
         parquet_path = self._get_parquet_path(cache_key)
 
         if isinstance(result, pl.DataFrame):
@@ -121,7 +153,15 @@ class PolarsCache:
     def _load_polars_result(
         self, parquet_path: str, lazy: bool = False
     ) -> pl.DataFrame | pl.LazyFrame:
-        """Load a Polars DataFrame or LazyFrame from parquet."""
+        """Load a Polars DataFrame or LazyFrame from parquet.
+
+        Args:
+            parquet_path: Path to the parquet file to load.
+            lazy: If True, return a LazyFrame; if False, return a DataFrame.
+
+        Returns:
+            A Polars DataFrame if lazy=False, or LazyFrame if lazy=True.
+        """
         if lazy:
             return pl.scan_parquet(parquet_path)
         else:
@@ -134,13 +174,23 @@ class PolarsCache:
         trim_arg: int | None = None,
         symlink_name: str | None = None,
     ):
-        """
-        Decorator for caching Polars DataFrames and LazyFrames.
+        """Decorator for caching Polars DataFrames and LazyFrames.
+
+        This decorator will cache function results that return Polars DataFrames or
+        LazyFrames. The cache uses function signatures (module, name, args, kwargs)
+        to determine cache hits. Results are stored as parquet files with metadata
+        tracked via diskcache, and readable symlink structures are created for
+        easy file system navigation.
 
         Args:
             symlinks_dir: Override instance setting for readable directory name.
             nested: Override instance setting for module path splitting.
             trim_arg: Override instance setting for max argument length.
+            symlink_name: Override instance setting for symlink filename.
+
+        Returns:
+            A decorator function that can be applied to functions returning
+            Polars DataFrames or LazyFrames.
         """
         # Use instance defaults if not overridden
         use_dir_name = (
@@ -225,7 +275,20 @@ class PolarsCache:
         cache_key: str,
         result: pl.DataFrame | pl.LazyFrame,
     ):
-        """Create a readable symlink structure pointing to the blob."""
+        """Create a readable symlink structure pointing to the blob.
+
+        Creates a human-readable directory structure with symlinks that point
+        to the actual parquet files, making it easier to browse cached results
+        in the file system. The structure can be nested (module/function/args)
+        or flat (module.function/args) based on configuration.
+
+        Args:
+            func: The cached function.
+            args: Positional arguments from the function call.
+            kwargs: Keyword arguments from the function call.
+            cache_key: The unique cache key for this result.
+            result: The function result (used for determining file type).
+        """
         # Get module and function info
         module_name = func.__module__
         func_qualname = func.__qualname__
@@ -275,7 +338,12 @@ class PolarsCache:
             pass
 
     def clear(self):
-        """Clear all cached data."""
+        """Clear all cached data.
+
+        Removes all cached metadata, parquet files, and the readable symlink
+        structure. This completely resets the cache to an empty state while
+        preserving the cache directory structure for future use.
+        """
         self.cache.clear()
         # Remove parquet files
         for parquet_file in self.parquet_dir.glob("*.parquet"):
@@ -294,6 +362,15 @@ class _DummyCache:
     cache_dir = None
 
     def cache_polars(self, **kwargs):
+        """Return a no-op decorator that doesn't cache anything.
+
+        Args:
+            **kwargs: Ignored keyword arguments for compatibility.
+
+        Returns:
+            A decorator that returns the original function unchanged.
+        """
+
         def decorator(func):
             return func  # Just return the original function unchanged
 
@@ -315,16 +392,38 @@ def cache(
     trim_arg: int = 50,
     symlink_name: str | None = None,
 ):
-    """
-    Convenience decorator for caching Polars DataFrames and LazyFrames.
+    """Convenience decorator for caching Polars DataFrames and LazyFrames.
+
+    This function provides a simple interface to create and use a global cache
+    instance for decorating functions that return Polars DataFrames or LazyFrames.
+    On first call, it initializes the global cache with the provided settings.
+    Subsequent calls will reuse the existing cache unless a different cache_dir
+    is specified.
 
     Args:
-        cache_dir: Directory for cache storage. If None, uses system temp directory.
-        size_limit: Maximum cache size in bytes, or as a string. Default: "1GB".
+        cache_dir: Directory for cache storage. If None, uses current working directory
+                   or system temp directory if use_tmp is True.
+        use_tmp: If True and cache_dir is None, put cache dir in system temp directory.
+        hidden: If True, prefix directory name with dot (e.g. '.polars_cache').
+        size_limit: Maximum cache size in bytes (int) or as a string. Default: "1GB".
         symlinks_dir: Name of the readable directory ("functions", "cache", etc.).
         nested: If True, split module.function into module/function dirs.
-                          If False, use encoded full qualname as single dir.
+                If False, use encoded full qualname as single dir.
         trim_arg: Maximum length for argument values in directory names.
+        symlink_name: Custom name for symlink files. If None, uses default.
+
+    Returns:
+        A decorator function that can be applied to functions returning
+        Polars DataFrames or LazyFrames.
+
+    Example:
+        ```python
+        from plcache import cache
+
+        @cache(cache_dir="./my_cache", size_limit="500MB")
+        def load_data() -> pl.DataFrame:
+            return pl.read_csv("large_file.csv")
+        ```
     """
     global _global_cache
     uncached = isinstance(_global_cache, _DummyCache)
@@ -335,6 +434,8 @@ def cache(
     ):
         _global_cache = PolarsCache(
             cache_dir=cache_dir,
+            use_tmp=use_tmp,
+            hidden=hidden,
             size_limit=_parse_size(size_limit),
             symlinks_dir=symlinks_dir,
             nested=nested,

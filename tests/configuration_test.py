@@ -1,3 +1,5 @@
+"""Configuration options tests for the Polars caching system."""
+
 from pathlib import Path
 
 import polars as pl

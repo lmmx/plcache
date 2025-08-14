@@ -1,5 +1,4 @@
-"""
-Performance comparison examples for the Polars Cache library.
+"""Performance comparison examples for the Polars Cache library.
 
 This example demonstrates the performance benefits of caching and compares
 cached vs uncached function execution times.

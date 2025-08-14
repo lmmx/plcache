@@ -21,3 +21,9 @@ debug = ["pysnooper>=1.2.3"]
 
 [tool.uv]
 default-groups = ["dev", "debug"]
+
+[tool.ruff.lint]
+select = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google" # or "numpy" if you prefer

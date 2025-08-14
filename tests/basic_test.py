@@ -1,3 +1,5 @@
+"""Basic functionality tests for the Polars caching system."""
+
 import time
 from contextlib import contextmanager
 
@@ -12,6 +14,7 @@ BRIEF_WAIT = 0.1  # Cannot go below 0.01 without actual computation being longer
 
 @contextmanager
 def timer():
+    """Context manager to measure elapsed time."""
     start = time.time()
     yield lambda: time.time() - start
 
