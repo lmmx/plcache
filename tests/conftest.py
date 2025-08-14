@@ -1,4 +1,5 @@
 # tests/conftest.py
+"""Test configuration and fixtures for the Polars caching tests."""
 
 import shutil
 

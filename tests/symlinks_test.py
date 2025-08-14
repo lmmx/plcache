@@ -1,6 +1,10 @@
+# tests/symlinks_test.py
+"""Symlink functionality tests for the Polars caching system."""
+
 from pathlib import Path
 
 import polars as pl
+
 from plcache import cache
 
 

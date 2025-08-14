@@ -1,5 +1,4 @@
-"""
-Basic usage examples for the Polars Cache library.
+"""Basic usage examples for the Polars Cache library.
 
 This example demonstrates the most common use cases for caching Polars DataFrames and LazyFrames.
 """

@@ -1,5 +1,4 @@
-"""
-Advanced configuration examples for the Polars Cache library.
+"""Advanced configuration examples for the Polars Cache library.
 
 This example demonstrates various configuration options and the PolarsCache class usage.
 """

@@ -1,3 +1,6 @@
+# tests/direct_class_test.py
+"""Direct class usage tests for the Polars caching system."""
+
 from pathlib import Path
 
 import polars as pl
@@ -7,7 +10,6 @@ from plcache import PolarsCache
 
 def test_polars_cache_class_direct_usage(tmp_path):
     """Test using PolarsCache class directly with custom settings."""
-
     pc = PolarsCache(
         cache_dir=tmp_path,
         symlinks_dir="cached_functions",
