@@ -1,3 +1,14 @@
+## Precommit
+
+To run the linters, install [pre-commit](https://pre-commit.com/) (globally on your system,
+typically) and then `pre-commit install` to set the git commit hooks. You can also run the hooks
+manually but development is easier with them installed and running automatically.
+
+## Just
+
+The task runner file is `Justfile` and all the development tasks are coordinated through running
+`just` plus the name of the "recipe" (small script). It's pretty self-explanatory. See [docs](https://github.com/casey/just).
+
 ## Stubs
 
 The project aims to use stubs, initially these are just the entire package and progressively being
