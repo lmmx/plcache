@@ -17,7 +17,7 @@ from ._debugging import snoop
 from ._parse_sizes import _parse_size
 
 if TYPE_CHECKING:
-    from .types import CallableFn
+    from .types import CallableFn, FilenameCallback
 
 _DEFAULT_SYMLINK_NAME = "output.parquet"
 
@@ -34,7 +34,7 @@ class PolarsCache:
         symlinks_dir: str = "functions",
         nested: bool = True,
         trim_arg: int = 50,
-        symlink_name: str | None = None,
+        symlink_name: str | FilenameCallback | None = None,
     ):
         """Initialise the cache.
 
@@ -47,7 +47,9 @@ class PolarsCache:
             nested: If True, split module.function into module/function dirs.
                     If False, use percent-encoded function qualname as single dir.
             trim_arg: Maximum length for argument values in directory names.
-            symlink_name: Custom name for symlink files. If None, uses "output.parquet".
+            symlink_name: Custom name for symlink files. Can be a string or a callable
+                          which will receive the function being cached, its args, its kwargs,
+                          the result, and cache key. If None, uses default of "output.parquet".
         """
         if cache_dir is None:
             dir_name = ".polars_cache" if hidden else "polars_cache"
@@ -172,7 +174,7 @@ class PolarsCache:
         symlinks_dir: str | None = None,
         nested: bool | None = None,
         trim_arg: int | None = None,
-        symlink_name: str | None = None,
+        symlink_name: str | FilenameCallback | None = None,
     ):
         """Decorator for caching Polars DataFrames and LazyFrames.
 
@@ -322,7 +324,17 @@ class PolarsCache:
         final_readable_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine filename based on result type
-        symlink_name = self.symlink_name or _DEFAULT_SYMLINK_NAME
+        if callable(self.symlink_name):
+            try:
+                symlink_name = self.symlink_name(func, args, kwargs, result, cache_key)
+                if not isinstance(symlink_name, str) or not symlink_name.strip():
+                    symlink_name = _DEFAULT_SYMLINK_NAME
+            except Exception:
+                symlink_name = _DEFAULT_SYMLINK_NAME
+        elif isinstance(self.symlink_name, str):
+            symlink_name = self.symlink_name
+        else:
+            symlink_name = _DEFAULT_SYMLINK_NAME
 
         # Create symlink
         symlink_path = final_readable_dir / symlink_name
