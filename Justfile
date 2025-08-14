@@ -93,6 +93,15 @@ ty-ci:
             tar -xzf .ci_venv/venv.tar.gz
             mv venv .venv
             
+            # Fix pyvenv.cfg with current absolute path
+            if [ -f ".venv/pyvenv.cfg" ]; then
+                CURRENT_DIR=$(pwd)
+                sed -i "s|PLACEHOLDER_DIR|${CURRENT_DIR}/.venv|g" ".venv/pyvenv.cfg"
+                echo "✓ pyvenv.cfg updated with current directory: $CURRENT_DIR"
+                echo "Updated pyvenv.cfg contents:"
+                cat ".venv/pyvenv.cfg"
+            fi
+            
             echo "✅ Extraction complete, running diagnostics..."
             
             # Diagnostic checks
