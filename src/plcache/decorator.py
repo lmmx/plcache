@@ -12,11 +12,10 @@ import diskcache
 import polars as pl
 
 from ._debugging import snoop
+from ._parse_sizes import _parse_size
 
 if TYPE_CHECKING:
     from .types import CallableFn
-
-_GB = 2**30
 
 _DEFAULT_SYMLINK_NAME = "output.parquet"
 
@@ -29,7 +28,7 @@ class PolarsCache:
         cache_dir: str | None = None,
         use_tmp: bool = False,
         hidden: bool = True,
-        size_limit: int = 1 * _GB,
+        size_limit: int | str = "1GB",
         symlinks_dir: str = "functions",
         nested: bool = True,
         trim_arg: int = 50,
@@ -42,7 +41,7 @@ class PolarsCache:
             cache_dir: Directory for cache storage. If None, uses current working directory.
             use_tmp: If True and cache_dir is None, put cache dir in system temp directory.
             hidden: If True, prefix directory name with dot (e.g. '.polars_cache').
-            size_limit: Maximum cache size in bytes. Default: 1GB (`2**30`).
+            size_limit: Maximum cache size in bytes (int) or as a string. Default: "1GB".
             symlinks_dir: Name of the readable directory. Default: "functions".
             nested: If True, split module.function into module/function dirs.
                     If False, use percent-encoded function qualname as single dir.
@@ -66,7 +65,7 @@ class PolarsCache:
 
         # Use diskcache for metadata (function calls -> parquet file paths)
         self.cache = diskcache.Cache(
-            str(self.cache_dir / "metadata"), size_limit=size_limit
+            str(self.cache_dir / "metadata"), size_limit=_parse_size(size_limit)
         )
 
         # Directory for parquet files (blobs)
@@ -310,7 +309,7 @@ def cache(
     cache_dir: str | None = None,
     use_tmp: bool = False,
     hidden: bool = True,
-    size_limit: int = 1 * _GB,
+    size_limit: int | str = "1GB",
     symlinks_dir: str = "functions",
     nested: bool = True,
     trim_arg: int = 50,
@@ -321,7 +320,7 @@ def cache(
 
     Args:
         cache_dir: Directory for cache storage. If None, uses system temp directory.
-        size_limit: Maximum cache size in bytes. Default: 1GB (`2 ** 30`).
+        size_limit: Maximum cache size in bytes, or as a string. Default: "1GB".
         symlinks_dir: Name of the readable directory ("functions", "cache", etc.).
         nested: If True, split module.function into module/function dirs.
                           If False, use encoded full qualname as single dir.
@@ -336,7 +335,7 @@ def cache(
     ):
         _global_cache = PolarsCache(
             cache_dir=cache_dir,
-            size_limit=size_limit,
+            size_limit=_parse_size(size_limit),
             symlinks_dir=symlinks_dir,
             nested=nested,
             symlink_name=symlink_name,
