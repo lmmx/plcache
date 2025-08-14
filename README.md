@@ -74,7 +74,7 @@ Human-readable symlinks are created at `{cache_dir}/functions/module/function/ar
 
 plcache creates an organised, browsable cache structure with two layout options:
 
-**Split** module path (default: `split_module_path=True`) organises cache by separate module and function directories:
+**Nested** module path (default: `nested=True`) organises cache by separate module and function directories:
 
 ```
 .polars_cache/
@@ -91,7 +91,7 @@ plcache creates an organised, browsable cache structure with two layout options:
                 └── output.parquet -> ../../../blobs/e5f6g7h8.parquet
 ```
 
-**Flat** module path (`split_module_path=False`) uses encoded full module.function names in a single directory level:
+**Flat** module path (`nested=False`) uses encoded full module.function names in a single directory level:
 
 ```
 .polars_cache/
@@ -135,17 +135,17 @@ def my_function(): ...
 
 ```python
 # Custom readable directory name (great for organising different cache types)
-@cache(readable_dir_name="analytics")  # creates cache/analytics/ instead of cache/functions/
+@cache(symlinks_dir="analytics")  # creates cache/analytics/ instead of cache/functions/
 def analytics_function(): ...
 
-@cache(readable_dir_name="data_loading")
+@cache(symlinks_dir="data_loading")
 def load_data(): ...
 
 # Choose layout style
-@cache(split_module_path=True)   # module/function/ (default)
+@cache(nested=True)   # module/function/ (default)
 def split_example(): ...
 
-@cache(split_module_path=False)  # module.function/ (flat)
+@cache(nested=False)  # module.function/ (flat)
 def flat_example(): ...
 ```
 
@@ -153,7 +153,7 @@ def flat_example(): ...
 
 ```python
 # Control argument length in directory names
-@cache(max_arg_length=20)  # truncate long argument values
+@cache(trim_arg=20)  # truncate long argument values
 def function_with_long_args(very_long_argument_name: str): ...
 
 # Custom symlink filename
@@ -172,9 +172,9 @@ def data_processor(): ...
     use_tmp=False,                      # Use system temp directory
     hidden=True,                        # Prefix with dot (default)
     size_limit=2**30,                   # Max cache size (1GB default)
-    readable_dir_name="functions",      # Readable directory name
-    split_module_path=True,             # Module/function vs flat layout
-    max_arg_length=50,                  # Max argument length in paths
+    symlinks_dir="functions",           # Readable directory name
+    nested=True,                        # Module/function vs flat layout
+    trim_arg=50,                        # Max argument length in paths
     symlink_name="output.parquet"       # Custom symlink filename
 )
 def fully_configured(): ...
@@ -192,8 +192,8 @@ from plcache import PolarsCache
 # Create custom cache instance
 my_cache = PolarsCache(
     cache_dir="./analysis_cache",
-    readable_dir_name="experiments",
-    split_module_path=True,
+    symlinks_dir="experiments",
+    nested=True,
     symlink_name="experiment_result.parquet"
 )
 
@@ -208,7 +208,7 @@ def run_experiment(params: dict) -> pl.DataFrame:
 plcache handles various argument types intelligently:
 
 ```python
-@cache(max_arg_length=20)
+@cache(trim_arg=20)
 def complex_function(
     data_list: list[int],
     config: dict,
@@ -216,7 +216,7 @@ def complex_function(
     mode: str = "advanced_processing"
 ) -> pl.DataFrame:
     # Arguments are safely encoded in directory structure
-    # Long values are truncated to max_arg_length
+    # Long values are truncated to trim_arg
     return pl.DataFrame({"processed": [len(data_list)]})
 
 # Creates: functions/__main__/complex_function/arg0=[1, 2, 3]_config={'key': 'val'}_enabled=True_mode=super_long_mode_name/
@@ -265,7 +265,7 @@ from plcache import cache
 
 @cache(
     cache_dir="./data_cache", 
-    readable_dir_name="datasets",
+    symlinks_dir="datasets",
     symlink_name="raw_data.parquet"
 )
 def load_stock_data(symbol: str, start_date: str, end_date: str) -> pl.LazyFrame:
@@ -277,7 +277,7 @@ def load_stock_data(symbol: str, start_date: str, end_date: str) -> pl.LazyFrame
 
 @cache(
     cache_dir="./analysis_cache",
-    readable_dir_name="technical_analysis", 
+    symlinks_dir="technical_analysis", 
     symlink_name="indicators.parquet"
 )
 def technical_analysis(symbol: str, window: int = 20) -> pl.DataFrame:
@@ -314,7 +314,7 @@ See the `examples/` directory for comprehensive usage examples:
 1. **Use appropriate return types**: Return `LazyFrame` for large datasets you'll filter later
 2. **Cache at the right level**: Cache expensive I/O operations, not cheap transformations  
 3. **Monitor cache size**: Set reasonable `size_limit` to avoid disk space issues
-4. **organise with `readable_dir_name`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
+4. **organise with `symlinks_dir`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
 5. **Custom symlink names**: Use descriptive filenames like "raw_data.parquet", "results.parquet" to identify cache contents
 
 ## License

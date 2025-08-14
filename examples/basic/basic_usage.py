@@ -31,7 +31,7 @@ def load_customer_data(n_customers: int = 1000) -> pl.DataFrame:
 
 
 # Example 2: Caching LazyFrames with custom cache directory
-@cache(cache_dir="./my_cache", readable_dir_name="analytics")
+@cache(cache_dir="./my_cache", symlinks_dir="analytics")
 def process_sales_data(multiplier: float = 1.5) -> pl.LazyFrame:
     """Process sales data and return a LazyFrame."""
     print(f"📊 Processing sales data with multiplier {multiplier}...")

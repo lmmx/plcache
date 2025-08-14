@@ -5,6 +5,7 @@ This example demonstrates various configuration options and the PolarsCache clas
 """
 
 import polars as pl
+
 from plcache import PolarsCache, cache
 
 
@@ -16,8 +17,8 @@ def demonstrate_split_vs_flat():
     # Split module path (default) - creates: cache/functions/module/function/args/
     @cache(
         cache_dir="./example_cache_split",
-        readable_dir_name="functions",
-        split_module_path=True,
+        symlinks_dir="functions",
+        nested=True,
         symlink_name="result.parquet",
     )
     def split_example(value: int) -> pl.DataFrame:
@@ -26,8 +27,8 @@ def demonstrate_split_vs_flat():
     # Flat module path - creates: cache/functions/module.function/args/
     @cache(
         cache_dir="./example_cache_flat",
-        readable_dir_name="functions",
-        split_module_path=False,
+        symlinks_dir="functions",
+        nested=False,
         symlink_name="result.parquet",
     )
     def flat_example(value: int) -> pl.DataFrame:
@@ -57,9 +58,9 @@ def demonstrate_class_usage():
     # Create a custom cache instance
     my_cache = PolarsCache(
         cache_dir="./my_custom_cache",
-        readable_dir_name="analytics_cache",
-        split_module_path=True,
-        max_arg_length=20,  # Truncate long arguments
+        symlinks_dir="analytics_cache",
+        nested=True,
+        trim_arg=20,  # Truncate long arguments
         symlink_name="data.parquet",
     )
 
@@ -98,9 +99,9 @@ def demonstrate_custom_configurations():
     # Configuration 1: Scientific data cache
     @cache(
         cache_dir="./science_cache",
-        readable_dir_name="experiments",
-        split_module_path=True,
-        max_arg_length=15,
+        symlinks_dir="experiments",
+        nested=True,
+        trim_arg=15,
         symlink_name="experiment_data.parquet",
     )
     def run_simulation(
@@ -123,9 +124,9 @@ def demonstrate_custom_configurations():
     # Configuration 2: Business analytics cache
     @cache(
         cache_dir="./analytics_cache",
-        readable_dir_name="reports",
-        split_module_path=False,  # Flat structure for simpler browsing
-        max_arg_length=30,
+        symlinks_dir="reports",
+        nested=False,  # Flat structure for simpler browsing
+        trim_arg=30,
         symlink_name="report.parquet",
     )
     def generate_report(
@@ -157,9 +158,7 @@ def demonstrate_argument_handling():
     print("\n🔤 Argument Handling Examples")
     print("=" * 60)
 
-    @cache(
-        cache_dir="./args_demo", max_arg_length=25, symlink_name="args_result.parquet"
-    )
+    @cache(cache_dir="./args_demo", trim_arg=25, symlink_name="args_result.parquet")
     def complex_function(
         numbers: list[int],
         config: dict,

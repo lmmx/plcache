@@ -15,15 +15,15 @@ Tests the fundamental caching behavior and performance.
 ### `configuration_test.py` - Configuration Options
 Tests various configuration parameters and their effects on cache behavior.
 
-- **`test_cache_custom_dir_name`**: Verifies that custom `readable_dir_name` parameter works correctly
-- **`test_max_arg_length_truncation`**: Tests that long function arguments are properly truncated in directory names according to `max_arg_length` setting
+- **`test_cache_custom_dir_name`**: Verifies that custom `symlinks_dir` parameter works correctly
+- **`test_trim_arg_truncation`**: Tests that long function arguments are properly truncated in directory names according to `trim_arg` setting
 - **`test_cache_with_kwargs`**: Ensures that functions with keyword arguments create proper directory structures including both positional and keyword arguments
 
 ### `directory_structure_test.py` - Directory Layout Patterns
 Tests how the cache organises files and directories in different structural modes.
 
-- **`test_split_module_path`**: Verifies `split_module_path=True` creates structure like `functions/module_name/function_name/args/`
-- **`test_flat_module_path`**: Verifies `split_module_path=False` creates structure like `functions/full_qualified_name/args/`
+- **`test_nested`**: Verifies `nested=True` creates structure like `functions/module_name/function_name/args/`
+- **`test_flat_module_path`**: Verifies `nested=False` creates structure like `functions/full_qualified_name/args/`
 - **`test_multiple_functions_separate_directories`**: Ensures different functions create separate directory hierarchies
 
 ### `symlinks_test.py` - Symlink Functionality
