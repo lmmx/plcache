@@ -10,7 +10,7 @@ repos:
   - repo: https://github.com/lmmx/just-pre-commit
     rev: v0.5.9
     hooks:
-      - id: run-just-script
+      - id: run-just-rust
         # args: ['precommit']
         args: ['ty-ci']
   - repo: https://github.com/compilerla/conventional-pre-commit
