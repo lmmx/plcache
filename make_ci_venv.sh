@@ -4,8 +4,20 @@ CI_DIR=".ci_venv"
 CHECKSUM_DIR="$CI_DIR/checksums"
 COMPRESSED_ARCHIVE="$CI_DIR/venv.tar.gz"
 TEMP_VENV="$CI_DIR/temp-venv"
+VENV_STATE_CHECKSUM="$CI_DIR/venv_state.checksum"
 
 mkdir -p "$CI_DIR" "$CHECKSUM_DIR"
+
+# Check if venv state has changed
+echo "Checking venv state..."
+current_venv_checksum=$(find .venv -type f \( -name "*.py" -o -name "*.so" -o -name "*.so.*" -o -name "pyvenv.cfg" \) -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+
+if [ -f "$VENV_STATE_CHECKSUM" ] && [ -f "$COMPRESSED_ARCHIVE" ] && [ "$(cat "$VENV_STATE_CHECKSUM")" = "$current_venv_checksum" ]; then
+    echo "✓ Venv unchanged, using existing archive"
+    compressed_size=$(du -sh "$COMPRESSED_ARCHIVE" | cut -f1)
+    echo "Archive size: $compressed_size"
+    exit 0
+fi
 
 # Always start with a fresh copy of the current .venv
 echo "Creating temp venv from current .venv..."
@@ -116,6 +128,9 @@ if "$TEMP_VENV/bin/python" -c "import polars, diskcache, pytest; print('All impo
     echo "✓ Compressed venv works, creating archive..."
     tar -czf "$COMPRESSED_ARCHIVE" -C "$CI_DIR" temp-venv/ --transform 's/^temp-venv/venv/'
     echo "✓ Created $COMPRESSED_ARCHIVE"
+    
+    # Save the venv state checksum for future runs
+    echo "$current_venv_checksum" > "$VENV_STATE_CHECKSUM"
     
     # Show size savings
     original_size=$(du -sh .venv | cut -f1)
