@@ -70,7 +70,7 @@ example-perf:
 
 refresh-stubs:
     uv sync
-    ./make_ci_venv.sh
+    ./stub_gen.sh
     deactivate
     mv .venv/ offvenv
     pre-commit run --all-files
