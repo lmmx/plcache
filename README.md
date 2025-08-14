@@ -135,10 +135,10 @@ def my_function(): ...
 
 ```python
 # Custom readable directory name (great for organising different cache types)
-@cache(readable_dir_name="analytics")  # creates cache/analytics/ instead of cache/functions/
+@cache(symlinks_dir="analytics")  # creates cache/analytics/ instead of cache/functions/
 def analytics_function(): ...
 
-@cache(readable_dir_name="data_loading")
+@cache(symlinks_dir="data_loading")
 def load_data(): ...
 
 # Choose layout style
@@ -172,7 +172,7 @@ def data_processor(): ...
     use_tmp=False,                      # Use system temp directory
     hidden=True,                        # Prefix with dot (default)
     size_limit=2**30,                   # Max cache size (1GB default)
-    readable_dir_name="functions",      # Readable directory name
+    symlinks_dir="functions",           # Readable directory name
     split_module_path=True,             # Module/function vs flat layout
     max_arg_length=50,                  # Max argument length in paths
     symlink_name="output.parquet"       # Custom symlink filename
@@ -192,7 +192,7 @@ from plcache import PolarsCache
 # Create custom cache instance
 my_cache = PolarsCache(
     cache_dir="./analysis_cache",
-    readable_dir_name="experiments",
+    symlinks_dir="experiments",
     split_module_path=True,
     symlink_name="experiment_result.parquet"
 )
@@ -265,7 +265,7 @@ from plcache import cache
 
 @cache(
     cache_dir="./data_cache", 
-    readable_dir_name="datasets",
+    symlinks_dir="datasets",
     symlink_name="raw_data.parquet"
 )
 def load_stock_data(symbol: str, start_date: str, end_date: str) -> pl.LazyFrame:
@@ -277,7 +277,7 @@ def load_stock_data(symbol: str, start_date: str, end_date: str) -> pl.LazyFrame
 
 @cache(
     cache_dir="./analysis_cache",
-    readable_dir_name="technical_analysis", 
+    symlinks_dir="technical_analysis", 
     symlink_name="indicators.parquet"
 )
 def technical_analysis(symbol: str, window: int = 20) -> pl.DataFrame:
@@ -314,7 +314,7 @@ See the `examples/` directory for comprehensive usage examples:
 1. **Use appropriate return types**: Return `LazyFrame` for large datasets you'll filter later
 2. **Cache at the right level**: Cache expensive I/O operations, not cheap transformations  
 3. **Monitor cache size**: Set reasonable `size_limit` to avoid disk space issues
-4. **organise with `readable_dir_name`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
+4. **organise with `symlinks_dir`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
 5. **Custom symlink names**: Use descriptive filenames like "raw_data.parquet", "results.parquet" to identify cache contents
 
 ## License

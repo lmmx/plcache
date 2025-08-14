@@ -5,6 +5,7 @@ This example demonstrates various configuration options and the PolarsCache clas
 """
 
 import polars as pl
+
 from plcache import PolarsCache, cache
 
 
@@ -16,7 +17,7 @@ def demonstrate_split_vs_flat():
     # Split module path (default) - creates: cache/functions/module/function/args/
     @cache(
         cache_dir="./example_cache_split",
-        readable_dir_name="functions",
+        symlinks_dir="functions",
         split_module_path=True,
         symlink_name="result.parquet",
     )
@@ -26,7 +27,7 @@ def demonstrate_split_vs_flat():
     # Flat module path - creates: cache/functions/module.function/args/
     @cache(
         cache_dir="./example_cache_flat",
-        readable_dir_name="functions",
+        symlinks_dir="functions",
         split_module_path=False,
         symlink_name="result.parquet",
     )
@@ -57,7 +58,7 @@ def demonstrate_class_usage():
     # Create a custom cache instance
     my_cache = PolarsCache(
         cache_dir="./my_custom_cache",
-        readable_dir_name="analytics_cache",
+        symlinks_dir="analytics_cache",
         split_module_path=True,
         max_arg_length=20,  # Truncate long arguments
         symlink_name="data.parquet",
@@ -98,7 +99,7 @@ def demonstrate_custom_configurations():
     # Configuration 1: Scientific data cache
     @cache(
         cache_dir="./science_cache",
-        readable_dir_name="experiments",
+        symlinks_dir="experiments",
         split_module_path=True,
         max_arg_length=15,
         symlink_name="experiment_data.parquet",
@@ -123,7 +124,7 @@ def demonstrate_custom_configurations():
     # Configuration 2: Business analytics cache
     @cache(
         cache_dir="./analytics_cache",
-        readable_dir_name="reports",
+        symlinks_dir="reports",
         split_module_path=False,  # Flat structure for simpler browsing
         max_arg_length=30,
         symlink_name="report.parquet",

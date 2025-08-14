@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import polars as pl
+
 from plcache import cache
 
 
@@ -9,7 +10,7 @@ def test_split_module_path(tmp_path):
 
     @cache(
         cache_dir=tmp_path,
-        readable_dir_name="functions",
+        symlinks_dir="functions",
         split_module_path=True,
         symlink_name="result.parquet",
     )

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import polars as pl
+
 from plcache import PolarsCache
 
 
@@ -9,7 +10,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
 
     pc = PolarsCache(
         cache_dir=tmp_path,
-        readable_dir_name="cached_functions",
+        symlinks_dir="cached_functions",
         split_module_path=True,
         symlink_name="result.parquet",
         max_arg_length=20,

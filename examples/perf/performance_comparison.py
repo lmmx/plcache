@@ -6,9 +6,8 @@ cached vs uncached function execution times.
 """
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from collections.abc import Generator
 
 import polars as pl
 from polars.testing import assert_frame_equal
@@ -38,7 +37,7 @@ def expensive_data_operation(n_rows: int, delay: float = 0.1) -> pl.DataFrame:
     )
 
 
-@cache(cache_dir="./perf_cache", readable_dir_name="performance_tests")
+@cache(cache_dir="./perf_cache", symlinks_dir="performance_tests")
 def cached_data_operation(n_rows: int, delay: float = 0.1) -> pl.DataFrame:
     """Same expensive operation but with caching enabled."""
     print(f"⚡ Cached operation: {n_rows} rows (simulated delay: {delay}s)")

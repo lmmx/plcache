@@ -30,7 +30,7 @@ class PolarsCache:
         use_tmp: bool = False,
         hidden: bool = True,
         size_limit: int = 1 * _GB,
-        readable_dir_name: str = "functions",
+        symlinks_dir: str = "functions",
         split_module_path: bool = True,
         max_arg_length: int = 50,
         symlink_name: str | None = None,
@@ -43,7 +43,7 @@ class PolarsCache:
             use_tmp: If True and cache_dir is None, put cache dir in system temp directory.
             hidden: If True, prefix directory name with dot (e.g. '.polars_cache').
             size_limit: Maximum cache size in bytes. Default: 1GB (`2**30`).
-            readable_dir_name: Name of the readable directory. Default: "functions".
+            symlinks_dir: Name of the readable directory. Default: "functions".
             split_module_path: If True, split module.function into module/function dirs.
                                If False, use percent-encoded function qualname as single dir.
             max_arg_length: Maximum length for argument values in directory names.
@@ -60,7 +60,7 @@ class PolarsCache:
 
         # Configuration
         self.symlink_name = symlink_name
-        self.readable_dir_name = readable_dir_name
+        self.symlinks_dir_name = symlinks_dir
         self.split_module_path = split_module_path
         self.max_arg_length = max_arg_length
 
@@ -74,7 +74,7 @@ class PolarsCache:
         self.parquet_dir.mkdir(exist_ok=True)
 
         # Directory for readable structure
-        self.readable_dir = self.cache_dir / self.readable_dir_name
+        self.readable_dir = self.cache_dir / self.symlinks_dir_name
         self.readable_dir.mkdir(exist_ok=True)
 
     def _get_cache_key(
@@ -130,7 +130,7 @@ class PolarsCache:
 
     def cache_polars(
         self,
-        readable_dir_name: str | None = None,
+        symlinks_dir: str | None = None,
         split_module_path: bool | None = None,
         max_arg_length: int | None = None,
         symlink_name: str | None = None,
@@ -139,15 +139,13 @@ class PolarsCache:
         Decorator for caching Polars DataFrames and LazyFrames.
 
         Args:
-            readable_dir_name: Override instance setting for readable directory name.
+            symlinks_dir: Override instance setting for readable directory name.
             split_module_path: Override instance setting for module path splitting.
             max_arg_length: Override instance setting for max argument length.
         """
         # Use instance defaults if not overridden
         use_dir_name = (
-            readable_dir_name
-            if readable_dir_name is not None
-            else self.readable_dir_name
+            symlinks_dir if symlinks_dir is not None else self.symlinks_dir_name
         )
         use_split_module = (
             split_module_path
@@ -197,12 +195,12 @@ class PolarsCache:
 
                     # Create readable symlink
                     # Temporarily override instance settings for this call
-                    old_dir_name = self.readable_dir_name
+                    old_dir_name = self.symlinks_dir_name
                     old_split = self.split_module_path
                     old_max_arg = self.max_arg_length
                     old_symlink_name = self.symlink_name
 
-                    self.readable_dir_name = use_dir_name
+                    self.symlinks_dir_name = use_dir_name
                     self.split_module_path = use_split_module
                     self.max_arg_length = use_max_arg_len
                     self.symlink_name = use_symlink_name
@@ -213,7 +211,7 @@ class PolarsCache:
                         )
                     finally:
                         # Restore instance settings
-                        self.readable_dir_name = old_dir_name
+                        self.symlinks_dir_name = old_dir_name
                         self.split_module_path = old_split
                         self.max_arg_length = old_max_arg
                         self.symlink_name = old_symlink_name
@@ -319,7 +317,7 @@ def cache(
     use_tmp: bool = False,
     hidden: bool = True,
     size_limit: int = 1 * _GB,
-    readable_dir_name: str = "functions",
+    symlinks_dir: str = "functions",
     split_module_path: bool = True,
     max_arg_length: int = 50,
     symlink_name: str | None = None,
@@ -330,7 +328,7 @@ def cache(
     Args:
         cache_dir: Directory for cache storage. If None, uses system temp directory.
         size_limit: Maximum cache size in bytes. Default: 1GB (`2 ** 30`).
-        readable_dir_name: Name of the readable directory ("functions", "cache", etc.).
+        symlinks_dir: Name of the readable directory ("functions", "cache", etc.).
         split_module_path: If True, split module.function into module/function dirs.
                           If False, use encoded full qualname as single dir.
         max_arg_length: Maximum length for argument values in directory names.
@@ -345,14 +343,14 @@ def cache(
         _global_cache = PolarsCache(
             cache_dir=cache_dir,
             size_limit=size_limit,
-            readable_dir_name=readable_dir_name,
+            symlinks_dir=symlinks_dir,
             split_module_path=split_module_path,
             symlink_name=symlink_name,
             max_arg_length=max_arg_length,
         )
 
     return _global_cache.cache_polars(
-        readable_dir_name=readable_dir_name,
+        symlinks_dir=symlinks_dir,
         split_module_path=split_module_path,
         max_arg_length=max_arg_length,
         symlink_name=symlink_name,

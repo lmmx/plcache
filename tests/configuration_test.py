@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import polars as pl
+
 from plcache import cache
 
 
@@ -9,7 +10,7 @@ def test_cache_custom_dir_name(tmp_path):
 
     @cache(
         cache_dir=tmp_path,
-        readable_dir_name="my_cache",
+        symlinks_dir="my_cache",
         symlink_name="output.parquet",
     )
     def custom_func() -> pl.DataFrame:
