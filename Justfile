@@ -69,8 +69,11 @@ example-perf:
    $(uv python find) performance_comparison.py
 
 refresh-stubs:
+    #!/usr/bin/env bash
+    rm -rf .stubs
+    set -e  # Exit on any error
     uv sync --no-group debug
-    ./stub_gen.sh
+    ./stub_gen.py
     deactivate
     mv .venv/ offvenv
     pre-commit run --all-files
