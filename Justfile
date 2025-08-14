@@ -52,3 +52,15 @@ fix-eof-ws mode="":
           --exclude ".git/|.*cache/|.pdm-build|.venv/|site/|.json$|.lock|.sw[op]|.png|.jpg$" \
           $ARGS \
           .
+
+[working-directory: 'examples/basic']
+example-basic:
+   $(uv python find) basic_usage.py
+
+[working-directory: 'examples/advanced']
+example-advanced:
+   $(uv python find) advanced_usage.py
+
+[working-directory: 'examples/perf']
+example-perf:
+   $(uv python find) performance_comparison.py
