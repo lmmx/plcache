@@ -20,8 +20,8 @@ t:
 flake:
    flake8 src/plcache --max-line-length=88 --extend-ignore=E203,E501,
 
-ruff-check:
-   ruff check .
+ruff-check mode="":
+   ruff check . {{mode}}
 
 ruff-fmt:
    ruff format .

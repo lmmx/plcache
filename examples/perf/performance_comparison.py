@@ -6,16 +6,18 @@ cached vs uncached function execution times.
 """
 
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Generator
 
 import polars as pl
-from polars.testing import assert_frame_equal, assert_frame_not_equal
+from polars.testing import assert_frame_equal
+
 from plcache import cache
 
 
 @contextmanager
-def timer() -> Generator[callable, None, None]:
+def timer() -> Generator[Callable, None, None]:
     """Context manager to measure execution time."""
     start = time.time()
     yield lambda: time.time() - start
@@ -136,7 +138,7 @@ def compare_basic_performance():
     cache_hit_avg = sum(cached_times[1:]) / len(cached_times[1:])
     speedup = avg_uncached / cache_hit_avg
 
-    print(f"\n📈 Performance Results:")
+    print("\n📈 Performance Results:")
     print(f"   Average uncached time: {avg_uncached:.3f}s")
     print(f"   Cache hit time: {cache_hit_avg:.3f}s")
     print(f"   Speedup: {speedup:.1f}x faster with cache!")
@@ -144,7 +146,7 @@ def compare_basic_performance():
     # Verify results are identical
     result2 = cached_data_operation(n_rows, delay)
     assert_frame_equal(result1, result2)
-    print(f"   ✅ Cache integrity verified")
+    print("   ✅ Cache integrity verified")
 
 
 def compare_complex_operations():
@@ -218,7 +220,7 @@ def memory_usage_demo():
 
     speedup = creation_time / retrieval_time if retrieval_time > 0 else float("inf")
     print(f"   Speedup: {speedup:.1f}x")
-    print(f"   ✅ Memory: Data loaded from disk cache, not recreated in memory")
+    print("   ✅ Memory: Data loaded from disk cache, not recreated in memory")
 
     # Verify datasets are identical
     assert_frame_equal(df1, df2)

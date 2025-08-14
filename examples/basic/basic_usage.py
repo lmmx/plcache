@@ -5,6 +5,7 @@ This example demonstrates the most common use cases for caching Polars DataFrame
 """
 
 import polars as pl
+
 from plcache import cache
 
 
@@ -124,7 +125,7 @@ def main():
 
     # Second call should be instant
     start = time.time()
-    lazy_result2 = process_sales_data(2.0)
+    _lazy_result2 = process_sales_data(2.0)
     cached_time = time.time() - start
     print(f"⚡ Cached LazyFrame retrieved in {cached_time:.4f}s")
 
