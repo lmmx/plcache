@@ -1,13 +1,14 @@
 import os
+from typing import TYPE_CHECKING
 
 DEBUG = os.getenv("DEBUG_PYSNOOPER", False)
 
-if DEBUG:
-    from pysnooper import snoop
-else:
+if TYPE_CHECKING or not DEBUG:
 
     def snoop():
         def decorator(func):
             return func
 
         return decorator
+else:
+    pass

@@ -39,6 +39,39 @@ wheels = [
 ]
 
 [[package]]
+name = "plcache"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "diskcache" },
+    { name = "ty-extensions" },
+    { name = "typing-extensions" },
+]
+
+[package.dev-dependencies]
+debug = [
+    { name = "pysnooper" },
+]
+dev = [
+    { name = "polars" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "diskcache", specifier = ">=5.6.3" },
+    { name = "ty-extensions", specifier = ">=0.1.0" },
+    { name = "typing-extensions", specifier = ">=4.14.1" },
+]
+
+[package.metadata.requires-dev]
+debug = [{ name = "pysnooper", specifier = ">=1.2.3" }]
+dev = [
+    { name = "polars", specifier = ">=1.32.2" },
+    { name = "pytest", specifier = ">=8.4.1" },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -59,37 +92,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/af/ed/0f5ab777b0dc95936074266bc6fd9cf117886ebdd6685589437edfdbb186/polars-1.32.2-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:d1c53a828eedc215fb0dabc7cef02c6f4ad042157512ddb99840fd42b8da1e8a", size = 35490843, upload-time = "2025-08-07T10:50:18.325Z" },
     { url = "https://files.pythonhosted.org/packages/91/58/d2840554ef1c69e06a28ee928bdaa0d6a61af12205ff24c096628f217f99/polars-1.32.2-cp39-abi3-win_amd64.whl", hash = "sha256:5e1660a584e89e1d60cd89984feca38a695e491a966581fefe8be99c230ea154", size = 37897347, upload-time = "2025-08-07T10:50:22.247Z" },
     { url = "https://files.pythonhosted.org/packages/b8/53/4eaaa4f219add46594db21a05a9a5629ec6af20bd859a90668d5a1448abc/polars-1.32.2-cp39-abi3-win_arm64.whl", hash = "sha256:cd390364f6f3927474bd0aed255103195b9d2b3eef0f0c5bb429db5e6311615e", size = 34059100, upload-time = "2025-08-07T10:50:26.445Z" },
-]
-
-[[package]]
-name = "polarscache"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "diskcache" },
-    { name = "ty-extensions" },
-    { name = "typing-extensions" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "polars" },
-    { name = "pysnooper" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "diskcache", specifier = ">=5.6.3" },
-    { name = "ty-extensions", specifier = ">=0.1.0" },
-    { name = "typing-extensions", specifier = ">=4.14.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "polars", specifier = ">=1.32.2" },
-    { name = "pysnooper", specifier = ">=1.2.3" },
-    { name = "pytest", specifier = ">=8.4.1" },
 ]
 
 [[package]]

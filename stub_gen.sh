@@ -1,10 +1,11 @@
 #!/bin/bash
 
-CI_DIR="stubs"
+CI_DIR=".stubs"
 CHECKSUM_DIR="$CI_DIR/checksums"
 COMPRESSED_ARCHIVE="$CI_DIR/venv.tar.gz"
 TEMP_VENV="$CI_DIR/temp-venv"
 VENV_STATE_CHECKSUM="$CI_DIR/venv_state.checksum"
+DRY_RUN="false"
 
 mkdir -p "$CI_DIR" "$CHECKSUM_DIR"
 
@@ -22,7 +23,8 @@ fi
 # Always start with a fresh copy of the current .venv
 echo "Creating temp venv from current .venv..."
 rm -rf "$TEMP_VENV"
-cp -r .venv "$TEMP_VENV"
+mkdir -p "$TEMP_VENV"
+cp -r .venv/* "$TEMP_VENV/"
 
 # Fix the Python symlinks by copying the ENTIRE Python installation
 echo "Making venv relocatable with Python 3.13..."
@@ -40,11 +42,24 @@ if [ -L "$TEMP_VENV/bin/python" ]; then
         # Remove symlinks
         rm "$TEMP_VENV/bin/python"* 2>/dev/null || true
         
-        # Copy the entire Python installation into the venv
+        # Copy the entire Python installation into the venv (EXCLUDING site-packages)
         mkdir -p "$TEMP_VENV/python-install"
-        rsync -a --exclude='lib/python3.13/ensurepip/_bundled/*.whl' \
-                 --exclude='lib/python3.13/ensurepip' \
+        
+        # Copy everything except site-packages directories at any level
+        rsync -a \
+                 --exclude='site-packages/' \
+                 --exclude='*/site-packages/' \
+                 --exclude='**/site-packages/' \
+                 --exclude='lib/python*/site-packages/' \
+                 --exclude='lib/python3.13/ensurepip/_bundled/*.whl' \
+                 --exclude='lib/python3.13/ensurepip/' \
                  "$PYTHON_INSTALL_DIR"/ "$TEMP_VENV/python-install/"
+        
+        # Verify no site-packages were copied
+        if find "$TEMP_VENV/python-install" -name "site-packages" -type d | grep -q .; then
+            echo "ERROR: site-packages found in python-install, cleaning up..."
+            find "$TEMP_VENV/python-install" -name "site-packages" -type d -exec rm -rf {} +
+        fi
         
         # Create new executables that use the copied Python with proper venv setup
         cat > "$TEMP_VENV/bin/python" << 'EOF'
@@ -94,8 +109,8 @@ echo "Compressing shared libraries..."
 find "$TEMP_VENV" -name "*.so" -o -name "*.so.*" | while read file; do
     [ -f "$file" ] || continue
     
-    # Skip Python core libraries that UPX can't compress
-    if echo "$file" | grep -q -E "(libpython|python-install/bin/)"; then
+    # Skip Python core libraries that UPX can't compress AND site-packages in python-install
+    if echo "$file" | grep -q -E "(libpython|python-install/bin/|python-install/lib/python3\.13/site-packages)"; then
         echo "Skipping Python core file: $(basename "$file")"
         continue
     fi
@@ -113,6 +128,11 @@ find "$TEMP_VENV" -name "*.so" -o -name "*.so.*" | while read file; do
     
     echo "Compressing $rel_path..."
     cp "$file" "$file.backup"
+
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "DRY RUN: Would run: upx --best $file"
+        continue
+    fi
     
     if upx --best "$file" 2>/dev/null && upx -t "$file" 2>/dev/null; then
         echo "✓ $rel_path compressed successfully"
@@ -123,6 +143,11 @@ find "$TEMP_VENV" -name "*.so" -o -name "*.so.*" | while read file; do
         mv "$file.backup" "$file"
     fi
 done
+
+if [ "$DRY_RUN" = "true" ]; then
+    echo "DRY RUN: Skipping compression test and archive creation"
+    exit 0
+fi
 
 # Final test
 echo "Testing compressed venv..."

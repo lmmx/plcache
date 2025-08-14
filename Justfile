@@ -50,7 +50,7 @@ fix-eof-ws mode="":
     whitespace-format --add-new-line-marker-at-end-of-file \
           --new-line-marker=linux \
           --normalize-new-line-markers \
-          --exclude ".git/|.*cache/|.db|.parquet|.pdm-build|.venv/|site/|.json$|.lock|.sw[op]|.png|.jpg$" \
+          --exclude ".git/|.stubs/|.*cache/|.db|.parquet|.pdm-build|.venv/|site/|.json$|.lock|.sw[op]|.png|.jpg$" \
           $ARGS \
           .
 
@@ -69,7 +69,7 @@ example-perf:
    $(uv python find) performance_comparison.py
 
 refresh-stubs:
-    uv sync
+    uv sync --no-group debug
     ./stub_gen.sh
     deactivate
     mv .venv/ offvenv
@@ -95,10 +95,10 @@ ty-ci:
     
     # Check if .venv exists, if not extract from compressed CI venv
     if [ ! -d ".venv" ]; then
-        echo "📦 Extracting compressed virtual environment for CI..."
-        if [ -f "stubs/venv.tar.gz" ]; then
-            echo "Found compressed venv, extracting..."
-            tar -xzf stubs/venv.tar.gz
+        echo "📦 Extracting compressed stubs for CI..."
+        if [ -f ".stubs/venv.tar.gz" ]; then
+            echo "Found compressed stubs, extracting..."
+            tar -xzf .stubs/venv.tar.gz
             mv venv .venv
             
             # Fix pyvenv.cfg with current absolute path
@@ -150,7 +150,7 @@ ty-ci:
             python -c 'import pytest; print("✓ Pytest import successful")' || echo "❌ Pytest import failed"
             
         else
-            echo "❌ No compressed venv found, running regular setup..."
+            echo "❌ No stubs found, running regular setup..."
             just setup
         fi
     else
