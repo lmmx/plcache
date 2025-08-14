@@ -20,10 +20,16 @@ t:
 
 ty-ci:
     #!/usr/bin/env bash
-    # Check if .venv exists, if not run setup
+    # Check if .venv exists, if not extract from compressed CI venv
     if [ ! -d ".venv" ]; then
-        echo "Setting up virtual environment for CI..."
-        just setup
+        echo "Extracting compressed virtual environment for CI..."
+        if [ -f ".ci_venv/venv.tar.gz" ]; then
+            tar -xzf .ci_venv/venv.tar.gz
+            mv venv .venv
+        else
+            echo "No compressed venv found, running regular setup..."
+            just setup
+        fi
     fi
     just ty .
 
@@ -76,3 +82,5 @@ example-advanced:
 [working-directory: 'examples/perf']
 example-perf:
    $(uv python find) performance_comparison.py
+
+
