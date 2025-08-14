@@ -68,6 +68,14 @@ example-advanced:
 example-perf:
    $(uv python find) performance_comparison.py
 
+refresh-stubs:
+    uv sync
+    ./make_ci_venv.sh
+    deactivate
+    mv .venv/ offvenv
+    pre-commit run --all-files
+    rm -rf .venv
+    mv offvenv .venv
 
 
 
@@ -88,9 +96,9 @@ ty-ci:
     # Check if .venv exists, if not extract from compressed CI venv
     if [ ! -d ".venv" ]; then
         echo "📦 Extracting compressed virtual environment for CI..."
-        if [ -f ".ci_venv/venv.tar.gz" ]; then
+        if [ -f "stubs/venv.tar.gz" ]; then
             echo "Found compressed venv, extracting..."
-            tar -xzf .ci_venv/venv.tar.gz
+            tar -xzf stubs/venv.tar.gz
             mv venv .venv
             
             # Fix pyvenv.cfg with current absolute path

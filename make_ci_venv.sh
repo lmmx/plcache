@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CI_DIR=".ci_venv"
+CI_DIR="stubs"
 CHECKSUM_DIR="$CI_DIR/checksums"
 COMPRESSED_ARCHIVE="$CI_DIR/venv.tar.gz"
 TEMP_VENV="$CI_DIR/temp-venv"
@@ -42,7 +42,9 @@ if [ -L "$TEMP_VENV/bin/python" ]; then
         
         # Copy the entire Python installation into the venv
         mkdir -p "$TEMP_VENV/python-install"
-        cp -r "$PYTHON_INSTALL_DIR"/* "$TEMP_VENV/python-install/"
+        rsync -a --exclude='lib/python3.13/ensurepip/_bundled/*.whl' \
+                 --exclude='lib/python3.13/ensurepip' \
+                 "$PYTHON_INSTALL_DIR"/ "$TEMP_VENV/python-install/"
         
         # Create new executables that use the copied Python with proper venv setup
         cat > "$TEMP_VENV/bin/python" << 'EOF'
