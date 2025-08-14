@@ -24,7 +24,7 @@ fi
 echo "Creating temp venv from current .venv..."
 rm -rf "$TEMP_VENV"
 mkdir -p "$TEMP_VENV"
-cp -r .venv/* "$TEMP_VENV/"
+rsync -a --exclude='**/polars.abi3.so' .venv/ "$TEMP_VENV/"
 
 # Fix the Python symlinks by copying the ENTIRE Python installation
 echo "Making venv relocatable with Python 3.13..."
@@ -47,6 +47,7 @@ if [ -L "$TEMP_VENV/bin/python" ]; then
         
         # Copy everything except site-packages directories at any level
         rsync -a \
+                 --exclude='**/polars.abi3.so' \
                  --exclude='site-packages/' \
                  --exclude='*/site-packages/' \
                  --exclude='**/site-packages/' \
