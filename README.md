@@ -1,4 +1,4 @@
-# polarscache
+# plcache
 
 A disk cache decorator for Polars DataFrames and LazyFrames that saves results as Parquet files.
 
@@ -13,7 +13,7 @@ Feel free to use it as a convenient way to dump DataFrames to disk even when not
 ## Installation
 
 ```bash
-uv pip install polarscache
+uv pip install plcache
 ```
 
 ## Requirements
@@ -26,8 +26,8 @@ uv pip install polarscache
 
 - **Automatic type detection**: Caches and restores DataFrames/LazyFrames with their original types
 - **Parquet storage**: Preserves column datatypes and metadata in the Parquet format
-- **Human-readable cache structure**: Symlinked directory structure organized by module, function, and arguments for easy browsing
-- **Flexible organization**: Choose between nested module/function directories or flat structure
+- **Human-readable cache structure**: Symlinked directory structure organised by module, function, and arguments for easy browsing
+- **Flexible organisation**: Choose between nested module/function directories or flat structure
 - **Filesystem-safe encoding**: Automatically handles special characters in module/function names
 - **Configurable symlink names**: Customize output filenames for different use cases
 - **Argument handling**: Supports complex argument types with configurable truncation
@@ -43,7 +43,6 @@ from plcache import cache
 # Simple caching - just add the decorator
 @cache()
 def expensive_computation(n: int) -> pl.DataFrame:
-    # Simulate expensive work
     return pl.DataFrame({
         "values": range(n),
         "squared": [i**2 for i in range(n)]
@@ -67,16 +66,15 @@ call_str = f"{func_name}({args}, {kwargs})"
 cache_key = hashlib.sha256(call_str.encode()).hexdigest()
 ```
 
-The Parquet file is saved to `cache_dir/blobs/{hash}.parquet` and the cache key plus file path are stored in a SQLite database at `cache_dir/metadata/`. 
+The Parquet file is saved to `{cache_dir}/blobs/{hash}.parquet` and the cache key plus file path are stored in a SQLite database at `{cache_dir}/metadata/`. 
 
-Human-readable symlinks are created at `cache_dir/functions/module/function/args/` that point back to the blob files, so you can browse your cached results easily. If no args are passed, the directory is given the name `no_args/` rather than the empty string.
+Human-readable symlinks are created at `{cache_dir}/functions/module/function/args/` that point back to the blob files, so you can browse your cached results easily. If no args are passed, the directory is given the name `no_args/` rather than the empty string.
 
 ## Cache Structure
 
-plcache creates an organized, browsable cache structure with two layout options:
+plcache creates an organised, browsable cache structure with two layout options:
 
-### Split Module Path (default: `split_module_path=True`)
-Organizes cache by separate module and function directories:
+**Split** module path (default: `split_module_path=True`) organises cache by separate module and function directories:
 
 ```
 .polars_cache/
@@ -93,8 +91,7 @@ Organizes cache by separate module and function directories:
                 └── output.parquet -> ../../../blobs/e5f6g7h8.parquet
 ```
 
-### Flat Module Path (`split_module_path=False`)
-Uses encoded full module.function names in a single directory level:
+**Flat** module path (`split_module_path=False`) uses encoded full module.function names in a single directory level:
 
 ```
 .polars_cache/
@@ -110,7 +107,7 @@ Uses encoded full module.function names in a single directory level:
             └── output.parquet -> ../../blobs/e5f6g7h8.parquet
 ```
 
-## Configuration Options
+## Configurable Options
 
 ### Cache Directory Location
 
@@ -137,7 +134,7 @@ def my_function(): ...
 ### Directory Structure Options
 
 ```python
-# Custom readable directory name (great for organizing different cache types)
+# Custom readable directory name (great for organising different cache types)
 @cache(readable_dir_name="analytics")  # creates cache/analytics/ instead of cache/functions/
 def analytics_function(): ...
 
@@ -211,7 +208,7 @@ def run_experiment(params: dict) -> pl.DataFrame:
 plcache handles various argument types intelligently:
 
 ```python
-@cache(max_arg_length=30)
+@cache(max_arg_length=20)
 def complex_function(
     data_list: list[int],
     config: dict,
@@ -222,7 +219,7 @@ def complex_function(
     # Long values are truncated to max_arg_length
     return pl.DataFrame({"processed": [len(data_list)]})
 
-# Creates: functions/__main__/complex_function/arg0=[1, 2, 3]_config={'key': 'val'}_enabled=True_mode=advanced_processing/
+# Creates: functions/__main__/complex_function/arg0=[1, 2, 3]_config={'key': 'val'}_enabled=True_mode=super_long_mode_name/
 result = complex_function([1, 2, 3], {"key": "val"}, False, "super_long_mode_name_that_gets_truncated")
 ```
 
@@ -233,7 +230,7 @@ plcache automatically preserves the return type:
 ```python
 @cache()
 def get_lazy_data(n: int) -> pl.LazyFrame:
-    return pl.DataFrame({"x": range(n)}).lazy()
+    return pl.LazyFrame({"x": range(n)})
 
 @cache()  
 def get_eager_data(n: int) -> pl.DataFrame:
@@ -317,7 +314,7 @@ See the `examples/` directory for comprehensive usage examples:
 1. **Use appropriate return types**: Return `LazyFrame` for large datasets you'll filter later
 2. **Cache at the right level**: Cache expensive I/O operations, not cheap transformations  
 3. **Monitor cache size**: Set reasonable `size_limit` to avoid disk space issues
-4. **Organize with `readable_dir_name`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
+4. **organise with `readable_dir_name`**: Use descriptive names like "experiments", "datasets", "analysis" for different cache types
 5. **Custom symlink names**: Use descriptive filenames like "raw_data.parquet", "results.parquet" to identify cache contents
 
 ## License
