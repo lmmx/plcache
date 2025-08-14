@@ -5,8 +5,10 @@ A disk cache decorator for Polars DataFrames and LazyFrames that saves results a
 ## What it does
 
 Caches expensive Polars operations to disk using Parquet format.
-
 When you call a decorated function with the same arguments, it loads the cached Parquet file instead of recomputing.
+
+It aims to provide a low-effort outlet for the DataFrames you store in memory without reinventing the wheel.
+Feel free to use it as a convenient way to dump DataFrames to disk even when not caching!
 
 ## Installation
 
@@ -67,7 +69,7 @@ cache_key = hashlib.sha256(call_str.encode()).hexdigest()
 
 The Parquet file is saved to `cache_dir/blobs/{hash}.parquet` and the cache key plus file path are stored in a SQLite database at `cache_dir/metadata/`. 
 
-Human-readable symlinks are created at `cache_dir/functions/module/function/args/` that point back to the blob files, so you can browse your cached results easily.
+Human-readable symlinks are created at `cache_dir/functions/module/function/args/` that point back to the blob files, so you can browse your cached results easily. If no args are passed, the directory is given the name `no_args/` rather than the empty string.
 
 ## Cache Structure
 
