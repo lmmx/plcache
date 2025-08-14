@@ -1,5 +1,5 @@
 lint: ty flake ruff-check
-precommit: fmt taplo-check eof-check
+precommit: lint fmt taplo-check eof-check
 fmt: ruff-fmt taplo-fix eof-fix
 
 setup:
