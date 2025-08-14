@@ -19,3 +19,5 @@ This will run the 'setup' recipe in `Justfile` to give you a local uv virtual en
 - Run `just ty` to run `ty` type checking.
 - Run `just flake` to run `flake8` linting
 - Run `just fmt` to run `ruff format` auto-formatter.
+
+To run the same checks that will run on CI, use `pre-commit run --all-files`
