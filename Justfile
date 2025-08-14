@@ -3,9 +3,10 @@ precommit: lint fmt taplo-check eof-check
 fmt: ruff-fmt taplo-fix eof-fix
 
 setup:
+   #!/usr/bin/env bash
    uv venv
    source .venv/bin/activate
-   uv pip install -e .
+   uv sync
 
 test:
    $(uv python find) -m pytest tests
@@ -16,6 +17,15 @@ ty *args:
 
 t:
    just ty --output-format=concise
+
+ty-ci:
+    #!/usr/bin/env bash
+    # Check if .venv exists, if not run setup
+    if [ ! -d ".venv" ]; then
+        echo "Setting up virtual environment for CI..."
+        just setup
+    fi
+    just ty .
 
 flake:
    flake8 src/plcache --max-line-length=88 --extend-ignore=E203,E501,
