@@ -42,10 +42,10 @@ def test_cache_custom_dir_name(tmp_path):
     assert expected_symlink.exists()
 
 
-def test_max_arg_length_truncation(tmp_path):
+def test_trim_arg_truncation(tmp_path):
     """Test that long arguments get truncated in directory names."""
 
-    @cache(cache_dir=tmp_path, max_arg_length=10)
+    @cache(cache_dir=tmp_path, trim_arg=10)
     def truncate_test(very_long_argument: str) -> pl.DataFrame:
         return pl.DataFrame({"result": [len(very_long_argument)]})
 

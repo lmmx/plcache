@@ -13,7 +13,7 @@ def test_polars_cache_class_direct_usage(tmp_path):
         symlinks_dir="cached_functions",
         nested=True,
         symlink_name="result.parquet",
-        max_arg_length=20,
+        trim_arg=20,
     )
 
     @pc.cache_polars()

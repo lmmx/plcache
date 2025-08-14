@@ -32,7 +32,7 @@ class PolarsCache:
         size_limit: int = 1 * _GB,
         symlinks_dir: str = "functions",
         nested: bool = True,
-        max_arg_length: int = 50,
+        trim_arg: int = 50,
         symlink_name: str | None = None,
     ):
         """
@@ -46,7 +46,7 @@ class PolarsCache:
             symlinks_dir: Name of the readable directory. Default: "functions".
             nested: If True, split module.function into module/function dirs.
                     If False, use percent-encoded function qualname as single dir.
-            max_arg_length: Maximum length for argument values in directory names.
+            trim_arg: Maximum length for argument values in directory names.
         """
         if cache_dir is None:
             dir_name = ".polars_cache" if hidden else "polars_cache"
@@ -62,7 +62,7 @@ class PolarsCache:
         self.symlink_name = symlink_name
         self.symlinks_dir_name = symlinks_dir
         self.nested = nested
-        self.max_arg_length = max_arg_length
+        self.trim_arg = trim_arg
 
         # Use diskcache for metadata (function calls -> parquet file paths)
         self.cache = diskcache.Cache(
@@ -132,7 +132,7 @@ class PolarsCache:
         self,
         symlinks_dir: str | None = None,
         nested: bool | None = None,
-        max_arg_length: int | None = None,
+        trim_arg: int | None = None,
         symlink_name: str | None = None,
     ):
         """
@@ -141,16 +141,14 @@ class PolarsCache:
         Args:
             symlinks_dir: Override instance setting for readable directory name.
             nested: Override instance setting for module path splitting.
-            max_arg_length: Override instance setting for max argument length.
+            trim_arg: Override instance setting for max argument length.
         """
         # Use instance defaults if not overridden
         use_dir_name = (
             symlinks_dir if symlinks_dir is not None else self.symlinks_dir_name
         )
         use_split_module = nested if nested is not None else self.nested
-        use_max_arg_len = (
-            max_arg_length if max_arg_length is not None else self.max_arg_length
-        )
+        use_max_arg_len = trim_arg if trim_arg is not None else self.trim_arg
         use_symlink_name = (
             symlink_name if symlink_name is not None else self.symlink_name
         )
@@ -193,12 +191,12 @@ class PolarsCache:
                     # Temporarily override instance settings for this call
                     old_dir_name = self.symlinks_dir_name
                     old_split = self.nested
-                    old_max_arg = self.max_arg_length
+                    old_max_arg = self.trim_arg
                     old_symlink_name = self.symlink_name
 
                     self.symlinks_dir_name = use_dir_name
                     self.nested = use_split_module
-                    self.max_arg_length = use_max_arg_len
+                    self.trim_arg = use_max_arg_len
                     self.symlink_name = use_symlink_name
 
                     try:
@@ -209,7 +207,7 @@ class PolarsCache:
                         # Restore instance settings
                         self.symlinks_dir_name = old_dir_name
                         self.nested = old_split
-                        self.max_arg_length = old_max_arg
+                        self.trim_arg = old_max_arg
                         self.symlink_name = old_symlink_name
 
                     return result
@@ -248,12 +246,12 @@ class PolarsCache:
         # Create args directory name
         args_parts = []
         for i, arg in enumerate(args):
-            arg_str = str(arg)[: self.max_arg_length]
+            arg_str = str(arg)[: self.trim_arg]
             encoded_arg = urllib.parse.quote(arg_str, safe="")
             args_parts.append(f"arg{i}={encoded_arg}")
 
         for key, value in kwargs.items():
-            value_str = str(value)[: self.max_arg_length]
+            value_str = str(value)[: self.trim_arg]
             encoded_value = urllib.parse.quote(value_str, safe="")
             args_parts.append(f"{key}={encoded_value}")
 
@@ -315,7 +313,7 @@ def cache(
     size_limit: int = 1 * _GB,
     symlinks_dir: str = "functions",
     nested: bool = True,
-    max_arg_length: int = 50,
+    trim_arg: int = 50,
     symlink_name: str | None = None,
 ):
     """
@@ -327,7 +325,7 @@ def cache(
         symlinks_dir: Name of the readable directory ("functions", "cache", etc.).
         nested: If True, split module.function into module/function dirs.
                           If False, use encoded full qualname as single dir.
-        max_arg_length: Maximum length for argument values in directory names.
+        trim_arg: Maximum length for argument values in directory names.
     """
     global _global_cache
     uncached = isinstance(_global_cache, _DummyCache)
@@ -342,12 +340,12 @@ def cache(
             symlinks_dir=symlinks_dir,
             nested=nested,
             symlink_name=symlink_name,
-            max_arg_length=max_arg_length,
+            trim_arg=trim_arg,
         )
 
     return _global_cache.cache_polars(
         symlinks_dir=symlinks_dir,
         nested=nested,
-        max_arg_length=max_arg_length,
+        trim_arg=trim_arg,
         symlink_name=symlink_name,
     )

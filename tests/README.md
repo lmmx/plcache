@@ -16,7 +16,7 @@ Tests the fundamental caching behavior and performance.
 Tests various configuration parameters and their effects on cache behavior.
 
 - **`test_cache_custom_dir_name`**: Verifies that custom `symlinks_dir` parameter works correctly
-- **`test_max_arg_length_truncation`**: Tests that long function arguments are properly truncated in directory names according to `max_arg_length` setting
+- **`test_trim_arg_truncation`**: Tests that long function arguments are properly truncated in directory names according to `trim_arg` setting
 - **`test_cache_with_kwargs`**: Ensures that functions with keyword arguments create proper directory structures including both positional and keyword arguments
 
 ### `directory_structure_test.py` - Directory Layout Patterns

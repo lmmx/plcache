@@ -60,7 +60,7 @@ def demonstrate_class_usage():
         cache_dir="./my_custom_cache",
         symlinks_dir="analytics_cache",
         nested=True,
-        max_arg_length=20,  # Truncate long arguments
+        trim_arg=20,  # Truncate long arguments
         symlink_name="data.parquet",
     )
 
@@ -101,7 +101,7 @@ def demonstrate_custom_configurations():
         cache_dir="./science_cache",
         symlinks_dir="experiments",
         nested=True,
-        max_arg_length=15,
+        trim_arg=15,
         symlink_name="experiment_data.parquet",
     )
     def run_simulation(
@@ -126,7 +126,7 @@ def demonstrate_custom_configurations():
         cache_dir="./analytics_cache",
         symlinks_dir="reports",
         nested=False,  # Flat structure for simpler browsing
-        max_arg_length=30,
+        trim_arg=30,
         symlink_name="report.parquet",
     )
     def generate_report(
@@ -158,9 +158,7 @@ def demonstrate_argument_handling():
     print("\n🔤 Argument Handling Examples")
     print("=" * 60)
 
-    @cache(
-        cache_dir="./args_demo", max_arg_length=25, symlink_name="args_result.parquet"
-    )
+    @cache(cache_dir="./args_demo", trim_arg=25, symlink_name="args_result.parquet")
     def complex_function(
         numbers: list[int],
         config: dict,

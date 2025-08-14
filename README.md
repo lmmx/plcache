@@ -153,7 +153,7 @@ def flat_example(): ...
 
 ```python
 # Control argument length in directory names
-@cache(max_arg_length=20)  # truncate long argument values
+@cache(trim_arg=20)  # truncate long argument values
 def function_with_long_args(very_long_argument_name: str): ...
 
 # Custom symlink filename
@@ -174,7 +174,7 @@ def data_processor(): ...
     size_limit=2**30,                   # Max cache size (1GB default)
     symlinks_dir="functions",           # Readable directory name
     nested=True,                        # Module/function vs flat layout
-    max_arg_length=50,                  # Max argument length in paths
+    trim_arg=50,                        # Max argument length in paths
     symlink_name="output.parquet"       # Custom symlink filename
 )
 def fully_configured(): ...
@@ -208,7 +208,7 @@ def run_experiment(params: dict) -> pl.DataFrame:
 plcache handles various argument types intelligently:
 
 ```python
-@cache(max_arg_length=20)
+@cache(trim_arg=20)
 def complex_function(
     data_list: list[int],
     config: dict,
@@ -216,7 +216,7 @@ def complex_function(
     mode: str = "advanced_processing"
 ) -> pl.DataFrame:
     # Arguments are safely encoded in directory structure
-    # Long values are truncated to max_arg_length
+    # Long values are truncated to trim_arg
     return pl.DataFrame({"processed": [len(data_list)]})
 
 # Creates: functions/__main__/complex_function/arg0=[1, 2, 3]_config={'key': 'val'}_enabled=True_mode=super_long_mode_name/
