@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import inspect
 import os
 import tempfile
 import urllib.parse
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import diskcache
 import polars as pl
@@ -17,9 +18,80 @@ from ._debugging import snoop
 from ._parse_sizes import _parse_size
 
 if TYPE_CHECKING:
-    from .types import CallableFn, FilenameCallback
+    from .types import CacheKeyCallback, DecoratedFn, EntryDirCallback, FilenameCallback
 
 _DEFAULT_SYMLINK_NAME = "output.parquet"
+
+
+def _DEFAULT_CACHE_IDENT(func: DecoratedFn, args: tuple, kwargs: dict[str, Any]) -> str:
+    """Default cache key (ident function, the value that gets hashed).
+
+    Args:
+        func: The decorated function to generate a cache key for.
+        args: Positional arguments passed to the function in the cached call.
+        kwargs: Keyword arguments passed to the function in the cached call.
+
+    Returns:
+        str: Conjoined function module, qualname, and positional/named arguments.
+    """
+    return f"{func.__module__}.{func.__qualname__}({args}, {kwargs})"
+
+
+def sort_args(sig: inspect.Signature, bound_args: dict):
+    """Sort any variadic kwargs (**kwargs) with signature parameters first.
+
+    Signature parameters are already bound in signature order with defaults), then any
+    remaining **kwargs unpacked alphabetically.
+
+    Args:
+        sig: Function signature to use for ordering.
+        bound_args: Dict of bound named arguments (which may contain unsorted **kwargs).
+
+    Returns:
+        Named args dict in signature order followed by alphabetically sorted **kwargs.
+
+    Example:
+        Here we have two signature args "b" and "a" (in that order). We first sort
+        the signature parameters to ("a", "b") then the **kwargs to ("c", "d").
+
+        >>> def f(a, b, **kw): pass
+        >>> sig = inspect.signature(f)
+        >>> args = tuple()
+        >>> kwargs = dict(b=2, a=1, d=4, c=3)
+        >>> bound = sig.bind(*args, **kwargs)
+        >>> bound_args = bound.arguments  # {'a': 1, 'b': 2, 'kw': {'d': 4, 'c': 3}}
+        >>> sort_args(sig, bound_args)
+        {'a': 1, 'b': 2, 'c': 3, 'd': 4}
+    """
+
+    def not_var_keyword(param_name: str):
+        """Check if parameter is not **kwargs (already sorted)."""
+        return sig.parameters[param_name].kind != inspect.Parameter.VAR_KEYWORD
+
+    # Ordered names of parameters in the signature
+    bound_sig_params = list(filter(not_var_keyword, sig.parameters))
+    # There can be only one variadic **kwargs parameter
+    var_kw_params = set(bound_args) - set(bound_sig_params)
+    # Unpacked **kwargs dict of key: value that are not bound in the function signature
+    unpacked_kwargs = bound_args[var_kw_params.pop()] if any(var_kw_params) else {}
+    # Flatten out the **kwargs into the same dict as the bound signature params
+    return {
+        **{k: bound_args[k] for k in bound_sig_params},
+        **{k: unpacked_kwargs[k] for k in sorted(unpacked_kwargs)},
+    }
+
+
+def normalise_args(func, args, kwargs, sort: bool = True):
+    """Normalise all parameters to signature order, **kwargs sorted and unpacked last.
+
+    If `sort` is passed as True, sort the **kwargs (to avoid the same **kwargs in
+    different order causing a cache miss, as the order of **kwargs rarely matters).
+    """
+    sig = inspect.signature(func)
+    bound = sig.bind(*args, **kwargs)
+    bound.apply_defaults()  # Add missing defaults
+    bound_args = bound.arguments  # k:v dict of all signature params
+    return sort_args(sig, bound_args) if sort else bound_args
 
 
 class PolarsCache:
@@ -35,6 +107,8 @@ class PolarsCache:
         nested: bool = True,
         trim_arg: int = 50,
         symlink_name: str | FilenameCallback | None = None,
+        cache_key: CacheKeyCallback | None = None,
+        entry_dir: EntryDirCallback | None = None,
     ):
         """Initialise the cache.
 
@@ -50,13 +124,18 @@ class PolarsCache:
             symlink_name: Custom name for symlink files. Can be a string or a callable
                           which will receive the function being cached, its args, its kwargs,
                           the result, and cache key. If None, uses default of "output.parquet".
+            cache_key: Optional callback to set the cache key, otherwise made from the
+                       decorated function `{__module__}.{__qualname__}({args}, {kwargs})`.
+            entry_dir: Optional callback to set the directory name for a cache item. Not
+                       used for hashing but should be unique to avoid overwriting symlinks
+                       to cached results (the actual data blobs are preserved separately).
         """
         if cache_dir is None:
-            dir_name = ".polars_cache" if hidden else "polars_cache"
+            cache_dir_name = ".polars_cache" if hidden else "polars_cache"
             if use_tmp:
-                cache_dir = Path(tempfile.gettempdir()) / dir_name
+                cache_dir = Path(tempfile.gettempdir()) / cache_dir_name
             else:
-                cache_dir = Path.cwd() / dir_name
+                cache_dir = Path.cwd() / cache_dir_name
 
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
@@ -66,6 +145,10 @@ class PolarsCache:
         self.symlinks_dir_name = symlinks_dir
         self.nested = nested
         self.trim_arg = trim_arg
+        self.cache_ident = _DEFAULT_CACHE_IDENT if cache_key is None else cache_key
+        self.create_entry_dir_name = (
+            self._DEFAULT_CACHE_ENTRY_DIR_NAME if entry_dir is None else entry_dir
+        )
 
         # Use diskcache for metadata (function calls -> parquet file paths)
         self.cache = diskcache.Cache(
@@ -80,12 +163,28 @@ class PolarsCache:
         self.readable_dir = self.cache_dir / self.symlinks_dir_name
         self.readable_dir.mkdir(exist_ok=True)
 
-    def _get_cache_key(
-        self,
-        func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
-        args: tuple,
-        kwargs: dict,
+    def _DEFAULT_CACHE_ENTRY_DIR_NAME(
+        self, func: DecoratedFn, args: tuple, kwargs: dict[str, Any]
     ) -> str:
+        """Create directory name for function arguments.
+
+        Args:
+            func: The decorated function to generate a cache key for.
+            args: Positional arguments passed to the function in the cached call.
+            kwargs: Keyword arguments passed to the function in the cached call.
+
+        Returns:
+            str: Conjoined function module, qualname, and positional/named arguments.
+        """
+        args_parts = []
+        for key, value in normalise_args(func, args, kwargs).items():
+            value_str = str(value)[: self.trim_arg]
+            encoded_value = urllib.parse.quote(value_str, safe="")
+            args_parts.append(f"{key}={encoded_value}")
+
+        return "_".join(args_parts) if args_parts else "no_args"
+
+    def _get_cache_key(self, func: DecoratedFn, args: tuple, kwargs: dict) -> str:
         """Generate a cache key from function name and arguments.
 
         Creates a unique hash-based key by combining the function's module path,
@@ -99,11 +198,8 @@ class PolarsCache:
         Returns:
             A SHA256 hash string representing the unique cache key.
         """
-        # Create a string representation of the function call
-        ident = f"{func.__module__}.{func.__qualname__}({args}, {kwargs})"
-        # Hash it to get a consistent key
-        cache_key = hashlib.sha256(ident.encode()).hexdigest()
-        return cache_key
+        ident = self.cache_ident(func, args, kwargs)
+        return hashlib.sha256(ident.encode()).hexdigest()
 
     def _get_parquet_path(self, cache_key: str) -> Path:
         """Get the parquet file path for a cache key (in blobs directory).
@@ -204,9 +300,7 @@ class PolarsCache:
             symlink_name if symlink_name is not None else self.symlink_name
         )
 
-        def decorator(
-            func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
-        ) -> CallableFn[..., pl.DataFrame | pl.LazyFrame]:
+        def decorator(func: DecoratedFn) -> DecoratedFn:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 # Generate cache key
@@ -271,7 +365,7 @@ class PolarsCache:
 
     def _create_readable_symlink(
         self,
-        func: CallableFn[..., pl.DataFrame | pl.LazyFrame],
+        func: DecoratedFn,
         args: tuple,
         kwargs: dict,
         cache_key: str,
@@ -307,20 +401,8 @@ class PolarsCache:
             encoded_qualname = urllib.parse.quote(full_qualname, safe="")
             readable_path = self.readable_dir / encoded_qualname
 
-        # Create args directory name
-        args_parts = []
-        for i, arg in enumerate(args):
-            arg_str = str(arg)[: self.trim_arg]
-            encoded_arg = urllib.parse.quote(arg_str, safe="")
-            args_parts.append(f"arg{i}={encoded_arg}")
-
-        for key, value in kwargs.items():
-            value_str = str(value)[: self.trim_arg]
-            encoded_value = urllib.parse.quote(value_str, safe="")
-            args_parts.append(f"{key}={encoded_value}")
-
-        args_dir_name = "_".join(args_parts) if args_parts else "no_args"
-        final_readable_dir = readable_path / args_dir_name
+        entry_dir_name = self.create_entry_dir_name(func=func, args=args, kwargs=kwargs)
+        final_readable_dir = readable_path / entry_dir_name
         final_readable_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine filename based on result type

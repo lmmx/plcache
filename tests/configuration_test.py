@@ -89,7 +89,7 @@ def test_cache_with_kwargs(tmp_path):
         / "functions"
         / encoded_module
         / encoded_qualname
-        / "arg0=10_b=test"
+        / "a=10_b=test"
         / "data.parquet"
     )
 
