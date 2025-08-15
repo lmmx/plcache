@@ -1,4 +1,4 @@
-# plcache
+# 🐻‍❄️💿 polars-diskcache
 
 A diskcache decorator for Polars DataFrames and LazyFrames that saves results as Parquet files.
 
