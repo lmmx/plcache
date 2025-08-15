@@ -1,7 +1,7 @@
 [project]
 name = "plcache"
 version = "0.1.0"
-description = "Add your description here"
+description = "A diskcache decorator for Polars DataFrames and LazyFrames that saves function results as Parquet files"
 readme = "README.md"
 authors = [{ name = "Louis Maddox", email = "louismmx@gmail.com" }]
 requires-python = ">=3.13"

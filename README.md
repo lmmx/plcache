@@ -1,6 +1,6 @@
 # plcache
 
-A disk cache decorator for Polars DataFrames and LazyFrames that saves results as Parquet files.
+A diskcache decorator for Polars DataFrames and LazyFrames that saves results as Parquet files.
 
 ## What it does
 
