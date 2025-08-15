@@ -13,7 +13,7 @@ Feel free to use it as a convenient way to dump DataFrames to disk even when not
 ## Installation
 
 ```bash
-uv pip install plcache
+uv pip install polars-cache
 ```
 
 ## Requirements
