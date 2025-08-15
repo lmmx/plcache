@@ -1,5 +1,5 @@
 [project]
-name = "polars-cache"
+name = "polars-diskcache"
 version = "0.1.0"
 description = "A diskcache decorator for Polars DataFrames and LazyFrames that saves function results as Parquet files"
 readme = "README.md"
