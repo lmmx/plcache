@@ -23,18 +23,17 @@ if TYPE_CHECKING:
 _DEFAULT_SYMLINK_NAME = "output.parquet"
 
 
-def _DEFAULT_CACHE_IDENT(func: DecoratedFn, args: tuple, kwargs: dict[str, Any]) -> str:
+def _DEFAULT_CACHE_IDENT(func: DecoratedFn, bound_args: dict[str, Any]) -> str:
     """Default cache key (ident function, the value that gets hashed).
 
     Args:
         func: The decorated function to generate a cache key for.
-        args: Positional arguments passed to the function in the cached call.
-        kwargs: Keyword arguments passed to the function in the cached call.
+        bound_args: Bound arguments passed to the function in the cached call.
 
     Returns:
         str: Conjoined function module, qualname, and positional/named arguments.
     """
-    return f"{func.__module__}.{func.__qualname__}({args}, {kwargs})"
+    return f"{func.__module__}.{func.__qualname__}({bound_args})"
 
 
 def sort_args(sig: inspect.Signature, bound_args: dict):
@@ -122,10 +121,10 @@ class PolarsCache:
                     If False, use percent-encoded function qualname as single dir.
             trim_arg: Maximum length for argument values in directory names.
             symlink_name: Custom name for symlink files. Can be a string or a callable
-                          which will receive the function being cached, its args, its kwargs,
+                          which will receive the function being cached, its bound args,
                           the result, and cache key. If None, uses default of "output.parquet".
             cache_key: Optional callback to set the cache key, otherwise made from the
-                       decorated function `{__module__}.{__qualname__}({args}, {kwargs})`.
+                       decorated function `{__module__}.{__qualname__}({bound_args})`.
             entry_dir: Optional callback to set the directory name for a cache item. Not
                        used for hashing but should be unique to avoid overwriting symlinks
                        to cached results (the actual data blobs are preserved separately).
@@ -164,27 +163,28 @@ class PolarsCache:
         self.readable_dir.mkdir(exist_ok=True)
 
     def _DEFAULT_CACHE_ENTRY_DIR_NAME(
-        self, func: DecoratedFn, args: tuple, kwargs: dict[str, Any]
+        self, func: DecoratedFn, bound_args: dict[str, Any]
     ) -> str:
         """Create directory name for function arguments.
 
         Args:
             func: The decorated function to generate a cache key for.
-            args: Positional arguments passed to the function in the cached call.
-            kwargs: Keyword arguments passed to the function in the cached call.
+            bound_args: Bound arguments passed to the function in the cached call or set
+                        from defaults, in order of appearance in the signature or
+                        alphabetically for the **kwargs, if present.
 
         Returns:
             str: Conjoined function module, qualname, and positional/named arguments.
         """
         args_parts = []
-        for key, value in normalise_args(func, args, kwargs).items():
+        for key, value in bound_args.items():
             value_str = str(value)[: self.trim_arg]
             encoded_value = urllib.parse.quote(value_str, safe="")
             args_parts.append(f"{key}={encoded_value}")
 
         return "_".join(args_parts) if args_parts else "no_args"
 
-    def _get_cache_key(self, func: DecoratedFn, args: tuple, kwargs: dict) -> str:
+    def _get_cache_key(self, func: DecoratedFn, bound_args: dict[str, Any]) -> str:
         """Generate a cache key from function name and arguments.
 
         Creates a unique hash-based key by combining the function's module path,
@@ -192,13 +192,12 @@ class PolarsCache:
 
         Args:
             func: The function being cached.
-            args: Positional arguments passed to the function.
-            kwargs: Keyword arguments passed to the function.
+            bound_args: Bound arguments passed to the function.
 
         Returns:
             A SHA256 hash string representing the unique cache key.
         """
-        ident = self.cache_ident(func, args, kwargs)
+        ident = self.cache_ident(func, bound_args)
         return hashlib.sha256(ident.encode()).hexdigest()
 
     def _get_parquet_path(self, cache_key: str) -> Path:
@@ -275,7 +274,7 @@ class PolarsCache:
         """Decorator for caching Polars DataFrames and LazyFrames.
 
         This decorator will cache function results that return Polars DataFrames or
-        LazyFrames. The cache uses function signatures (module, name, args, kwargs)
+        LazyFrames. The cache uses function signatures (module, name, bound_args)
         to determine cache hits. Results are stored as parquet files with metadata
         tracked via diskcache, and readable symlink structures are created for
         easy file system navigation.
@@ -304,7 +303,8 @@ class PolarsCache:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 # Generate cache key
-                cache_key = self._get_cache_key(func, args, kwargs)
+                bound_args = normalise_args(func, args, kwargs)
+                cache_key = self._get_cache_key(func, bound_args)
 
                 # Check if result is cached
                 if cache_key in self.cache:
@@ -346,7 +346,7 @@ class PolarsCache:
 
                     try:
                         self._create_readable_symlink(
-                            func, args, kwargs, cache_key, result
+                            func, bound_args, cache_key, result
                         )
                     finally:
                         # Restore instance settings
@@ -366,8 +366,7 @@ class PolarsCache:
     def _create_readable_symlink(
         self,
         func: DecoratedFn,
-        args: tuple,
-        kwargs: dict,
+        bound_args: dict,
         cache_key: str,
         result: pl.DataFrame | pl.LazyFrame,
     ):
@@ -380,8 +379,7 @@ class PolarsCache:
 
         Args:
             func: The cached function.
-            args: Positional arguments from the function call.
-            kwargs: Keyword arguments from the function call.
+            bound_args: Bound arguments from the function call.
             cache_key: The unique cache key for this result.
             result: The function result (used for determining file type).
         """
@@ -401,14 +399,14 @@ class PolarsCache:
             encoded_qualname = urllib.parse.quote(full_qualname, safe="")
             readable_path = self.readable_dir / encoded_qualname
 
-        entry_dir_name = self.create_entry_dir_name(func=func, args=args, kwargs=kwargs)
+        entry_dir_name = self.create_entry_dir_name(func=func, bound_args=bound_args)
         final_readable_dir = readable_path / entry_dir_name
         final_readable_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine filename based on result type
         if callable(self.symlink_name):
             try:
-                symlink_name = self.symlink_name(func, args, kwargs, result, cache_key)
+                symlink_name = self.symlink_name(func, bound_args, result, cache_key)
                 if not isinstance(symlink_name, str) or not symlink_name.strip():
                     symlink_name = _DEFAULT_SYMLINK_NAME
             except Exception:
