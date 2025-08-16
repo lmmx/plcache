@@ -135,19 +135,24 @@ refresh-stubs *args="":
 release bump_level="micro":
     #!/usr/bin/env bash
     set -e  # Exit on any error
-    uv run pdm bump {{bump_level}}
+    
+    uv version {{bump_level}}
+
     # Exit early if help was requested
     if [[ "{{bump_level}}" == "--help" ]]; then
         exit 0
     fi
+    
     git add --all
     git commit -m "chore(temp): version check"
-    new_version=$(uv run pdm show --version)
+    new_version=$(uv version --short)
     git reset --soft HEAD~1
+    git add --all
     git commit -m  "chore(release): bump -> v$new_version"
     branch_name=$(git rev-parse --abbrev-ref HEAD);
     git push origin $branch_name
-    uv run pdm publish -u __token__ -P $(keyring get PYPIRC_TOKEN "")
+    uv build
+    uv publish -u __token__ -p $(keyring get PYPIRC_TOKEN "")
 
 
 ty-ci:
