@@ -406,14 +406,19 @@ class PolarsCache:
 
         # Determine filename based on result type
         if callable(self.symlink_name):
-            try:
-                symlink_name = self.symlink_name(func, bound_args, result, cache_key)
-                if not isinstance(symlink_name, str) or not symlink_name.strip():
-                    symlink_name = _DEFAULT_SYMLINK_NAME
-            except Exception:
-                symlink_name = _DEFAULT_SYMLINK_NAME
+            symlink_name = self.symlink_name(func, bound_args, result, cache_key)
+            if not isinstance(symlink_name, str):
+                raise TypeError(
+                    f"symlink_name callback must return str, got {type(symlink_name).__name__}"
+                )
+            if not symlink_name.strip():
+                raise ValueError(
+                    "symlink_name callback returned empty/whitespace-only string"
+                )
         elif isinstance(self.symlink_name, str):
             symlink_name = self.symlink_name
+            if not self.symlink_name.strip():
+                raise ValueError("symlink_name cannot be empty or whitespace-only")
         else:
             symlink_name = _DEFAULT_SYMLINK_NAME
 

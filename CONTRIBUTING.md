@@ -4,10 +4,12 @@ I would suggest you install:
 
 - `uv`
 - `just`
+- `pre-commit`
 
 Then run
 
 ```sh
+just install-hooks
 just setup
 ```
 
