@@ -102,17 +102,34 @@ example-advanced:
 example-perf:
    $(uv python find) performance_comparison.py
 
-refresh-stubs:
+refresh-stubs *args="":
     #!/usr/bin/env bash
     rm -rf .stubs
     set -e  # Exit on any error
-    uv sync --no-group debug
+    
+    # Check if --debug flag is passed and export DEBUG_PYSNOOPER
+    debug_flag=false
+    uv_args="--no-group debug"
+    echo "Args received: {{args}}"
+    if [[ "{{args}}" == *"--debug"* ]]; then
+        export DEBUG_PYSNOOPER=true
+        echo "DEBUG MODE: ON"
+        debug_flag=true
+        uv_args=""  # Remove --no-group debug when in debug mode
+    fi
+    
+    uv sync $uv_args
     ./stub_gen.py
     deactivate
     mv .venv/ offvenv
     just run-pc
     rm -rf .venv
     mv offvenv .venv
+    
+    # Unset DEBUG_PYSNOOPER if it was set
+    if [[ "$debug_flag" == "true" ]]; then
+        unset DEBUG_PYSNOOPER
+    fi
 
 pdmautobump *args:
     #!/usr/bin/env bash
