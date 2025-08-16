@@ -286,7 +286,7 @@ def test_sort_args_function():
     """Test the sort_args utility function directly."""
     import inspect
 
-    from plcache.decorator import sort_args
+    from plcache._args import sort_args
 
     def example_func(b: int, a: str, **kwargs):
         pass
