@@ -132,7 +132,7 @@ refresh-stubs *args="":
     fi
 
 # Release a new version, pass --help for options to `pdm bump`
-release bump_level="micro":
+release bump_level="patch":
     #!/usr/bin/env bash
     set -e  # Exit on any error
     
