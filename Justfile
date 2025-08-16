@@ -136,12 +136,12 @@ release bump_level="micro":
     #!/usr/bin/env bash
     set -e  # Exit on any error
     
-    uv version {{bump_level}}
-
     # Exit early if help was requested
     if [[ "{{bump_level}}" == "--help" ]]; then
         exit 0
     fi
+
+    uv version --bump {{bump_level}}
     
     git add --all
     git commit -m "chore(temp): version check"
