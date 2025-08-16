@@ -214,7 +214,9 @@ def cache(
     symlinks_dir: str = "functions",
     nested: bool = True,
     trim_arg: int = 50,
-    symlink_name: str | None = None,
+    symlink_name: str | FilenameCallback | None = None,
+    cache_key: CacheKeyCallback | None = None,
+    entry_dir: EntryDirCallback | None = None,
 ):
     """Convenience decorator for caching Polars DataFrames and LazyFrames."""
     global _global_cache
@@ -232,6 +234,8 @@ def cache(
             nested=nested,
             symlink_name=symlink_name,
             trim_arg=trim_arg,
+            cache_key=cache_key,
+            entry_dir=entry_dir,
         )
 
     return _global_cache.cache_polars(

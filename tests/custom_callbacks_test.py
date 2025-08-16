@@ -3,6 +3,7 @@
 
 import hashlib
 from pathlib import Path
+from urllib.parse import quote
 
 import polars as pl
 import pytest
@@ -321,3 +322,51 @@ def test_normalise_args_function():
     expected = {"a": 20, "b": "custom", "c": "start", "z": "end"}
     assert result1 == expected
     assert result2 == expected
+
+
+def test_convenience_decorator_callback_parity(tmp_path):
+    """Test that @cache decorator supports all the same callbacks as PolarsCache."""
+
+    def custom_cache_key(func, bound_args):
+        return f"custom_key_{bound_args['value']}"
+
+    def custom_entry_dir(func, bound_args):
+        return f"custom_dir_{bound_args['value']}"
+
+    def custom_symlink_name(func, bound_args, result, cache_key):
+        return f"custom_{bound_args['value']}.parquet"
+
+    @cache(
+        cache_dir=tmp_path,
+        cache_key=custom_cache_key,
+        entry_dir=custom_entry_dir,
+        symlink_name=custom_symlink_name,
+    )
+    def test_func(value: int) -> pl.DataFrame:
+        return pl.DataFrame({"value": [value]})
+
+    # Call function
+    result = test_func(42)
+
+    # Verify custom callbacks were used
+    cache_path = Path(tmp_path)
+
+    # Should find symlink with custom name in custom directory
+    expected_symlink = (
+        cache_path
+        / "functions"
+        / "custom_callbacks_test"
+        / quote(test_func.__qualname__)
+        / "custom_dir_42"
+        / "custom_42.parquet"
+    )
+    assert expected_symlink.exists(), f"Expected symlink at {expected_symlink}"
+
+    # Call again with same value - should hit cache due to custom cache key
+    result2 = test_func(42)
+    assert result.equals(result2)
+
+    # Should only have one blob file (proving cache key worked)
+    blob_dir = cache_path / "blobs"
+    parquet_files = list(blob_dir.glob("*.parquet"))
+    assert len(parquet_files) == 1
