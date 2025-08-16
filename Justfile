@@ -105,11 +105,18 @@ refresh-stubs:
     rm -rf .venv
     mv offvenv .venv
 
-
-
-
-
-
+pdmautobump *args:
+    #!/usr/bin/env bash
+    set -e  # Exit on any error
+    uv run pdm bump {{args}}
+    git add --all
+    git commit -m "chore(temp): version check"
+    new_version=$(uv run pdm show --version)
+    git reset --soft HEAD~1
+    git commit -m  "chore(release): bump -> v$new_version"
+    branch_name=$(git rev-parse --abbrev-ref HEAD);
+    git push origin $branch_name
+    uv run pdm publish -u __token__ -P $(keyring get PYPIRC_TOKEN "")
 
 
 ty-ci:
