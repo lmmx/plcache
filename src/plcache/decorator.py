@@ -6,7 +6,6 @@ import functools
 import hashlib
 import os
 import tempfile
-import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, overload
 
@@ -17,15 +16,11 @@ from ._args import normalise_args
 from ._debugging import snoop
 from ._dummy import _DummyCache
 from ._parse_sizes import _parse_size
+from .path_manager import CachePathManager
+from .symlink_manager import SymlinkManager
 
 if TYPE_CHECKING:
     from .types import CacheKeyCallback, DecoratedFn, EntryDirCallback, FilenameCallback
-
-_DEFAULT_SYMLINK_NAME = "output.parquet"
-
-
-# Convenience function for creating a global cache instance. Initialise with dummy cache
-_global_cache: PolarsCache | _DummyCache = _DummyCache()
 
 
 def _DEFAULT_CACHE_IDENT(func: DecoratedFn, bound_args: dict[str, Any]) -> str:
@@ -87,50 +82,23 @@ class PolarsCache:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
 
-        # Configuration
-        self.symlink_name = symlink_name
-        self.symlinks_dir_name = symlinks_dir
-        self.nested = nested
-        self.trim_arg = trim_arg
-        self.cache_ident = _DEFAULT_CACHE_IDENT if cache_key is None else cache_key
-        self.create_entry_dir_name = (
-            self._DEFAULT_CACHE_ENTRY_DIR_NAME if entry_dir is None else entry_dir
+        # Initialise managers
+        self.path_manager = CachePathManager(
+            cache_dir=self.cache_dir,
+            symlinks_dir_name=symlinks_dir,
+            nested=nested,
+            trim_arg=trim_arg,
+            entry_dir_callback=entry_dir,
         )
+        self.symlink_manager = SymlinkManager(symlink_name=symlink_name)
+
+        # Cache key generation
+        self.cache_ident = _DEFAULT_CACHE_IDENT if cache_key is None else cache_key
 
         # Use diskcache for metadata (function calls -> parquet file paths)
         self.cache = diskcache.Cache(
             str(self.cache_dir / "metadata"), size_limit=_parse_size(size_limit)
         )
-
-        # Directory for parquet files (blobs)
-        self.parquet_dir = self.cache_dir / "blobs"
-        self.parquet_dir.mkdir(exist_ok=True)
-
-        # Directory for readable structure
-        self.readable_dir = self.cache_dir / self.symlinks_dir_name
-        self.readable_dir.mkdir(exist_ok=True)
-
-    def _DEFAULT_CACHE_ENTRY_DIR_NAME(
-        self, func: DecoratedFn, bound_args: dict[str, Any]
-    ) -> str:
-        """Create directory name for function arguments.
-
-        Args:
-            func: The decorated function to generate a cache key for.
-            bound_args: Bound arguments passed to the function in the cached call or set
-                        from defaults, in order of appearance in the signature or
-                        alphabetically for the **kwargs, if present.
-
-        Returns:
-            str: Conjoined function module, qualname, and positional/named arguments.
-        """
-        args_parts = []
-        for key, value in bound_args.items():
-            value_str = str(value)[: self.trim_arg]
-            encoded_value = urllib.parse.quote(value_str, safe="")
-            args_parts.append(f"{key}={encoded_value}")
-
-        return "_".join(args_parts) if args_parts else "no_args"
 
     def _get_cache_key(self, func: DecoratedFn, bound_args: dict[str, Any]) -> str:
         """Generate a cache key from function name and arguments.
@@ -148,17 +116,6 @@ class PolarsCache:
         ident = self.cache_ident(func, bound_args)
         return hashlib.sha256(ident.encode()).hexdigest()
 
-    def _get_parquet_path(self, cache_key: str) -> Path:
-        """Get the parquet file path for a cache key (in blobs directory).
-
-        Args:
-            cache_key: The unique cache key for the cached result.
-
-        Returns:
-            Path object pointing to the parquet file location in the blobs directory.
-        """
-        return self.parquet_dir / f"{cache_key}.parquet"
-
     def _save_polars_result(
         self, result: pl.DataFrame | pl.LazyFrame, cache_key: str
     ) -> str:
@@ -174,7 +131,7 @@ class PolarsCache:
         Raises:
             TypeError: If result is not a DataFrame or LazyFrame.
         """
-        parquet_path = self._get_parquet_path(cache_key)
+        parquet_path = self.path_manager.get_parquet_path(cache_key)
 
         if isinstance(result, pl.DataFrame):
             result.write_parquet(parquet_path)
@@ -218,7 +175,6 @@ class PolarsCache:
         nested: bool | None = None,
         trim_arg: int | None = None,
         symlink_name: str | FilenameCallback | None = None,
-        # TODO: make these match the PolarsCache init!
     ):
         """Decorator for caching Polars DataFrames and LazyFrames.
 
@@ -238,15 +194,6 @@ class PolarsCache:
             A decorator function that can be applied to functions returning
             Polars DataFrames or LazyFrames.
         """
-        # Use instance defaults if not overridden
-        use_dir_name = (
-            symlinks_dir if symlinks_dir is not None else self.symlinks_dir_name
-        )
-        use_split_module = nested if nested is not None else self.nested
-        use_max_arg_len = trim_arg if trim_arg is not None else self.trim_arg
-        use_symlink_name = (
-            symlink_name if symlink_name is not None else self.symlink_name
-        )
 
         def decorator(func: DecoratedFn) -> DecoratedFn:
             @functools.wraps(func)
@@ -281,107 +228,52 @@ class PolarsCache:
                     # Store path and type info in cache
                     self.cache[cache_key] = {"path": parquet_path, "is_lazy": is_lazy}
 
-                    # Create readable symlink
-                    # Temporarily override instance settings for this call
-                    old_dir_name = self.symlinks_dir_name
-                    old_split = self.nested
-                    old_max_arg = self.trim_arg
-                    old_symlink_name = self.symlink_name
-
-                    self.symlinks_dir_name = use_dir_name
-                    self.nested = use_split_module
-                    self.trim_arg = use_max_arg_len
-                    self.symlink_name = use_symlink_name
-
-                    try:
-                        self._create_readable_symlink(
-                            func, bound_args, cache_key, result
+                    # Create readable symlink using temporary manager if overrides provided
+                    if any(
+                        x is not None
+                        for x in [symlinks_dir, nested, trim_arg, symlink_name]
+                    ):
+                        # Create temporary managers with overridden settings
+                        temp_path_manager = CachePathManager(
+                            cache_dir=self.cache_dir,
+                            symlinks_dir_name=symlinks_dir
+                            or self.path_manager.symlinks_dir_name,
+                            nested=nested
+                            if nested is not None
+                            else self.path_manager.nested,
+                            trim_arg=trim_arg
+                            if trim_arg is not None
+                            else self.path_manager.trim_arg,
+                            entry_dir_callback=self.path_manager.entry_dir_callback,
                         )
-                    finally:
-                        # Restore instance settings
-                        self.symlinks_dir_name = old_dir_name
-                        self.nested = old_split
-                        self.trim_arg = old_max_arg
-                        self.symlink_name = old_symlink_name
+                        temp_symlink_manager = SymlinkManager(
+                            symlink_name=symlink_name
+                            if symlink_name is not None
+                            else self.symlink_manager.symlink_name
+                        )
 
-                    return result
+                        readable_dir = temp_path_manager.get_readable_path(
+                            func, bound_args
+                        )
+                        blob_path = temp_path_manager.get_parquet_path(cache_key)
+                        temp_symlink_manager.create_symlink(
+                            func, bound_args, cache_key, result, readable_dir, blob_path
+                        )
+                    else:
+                        # Use instance managers
+                        readable_dir = self.path_manager.get_readable_path(
+                            func, bound_args
+                        )
+                        blob_path = self.path_manager.get_parquet_path(cache_key)
+                        self.symlink_manager.create_symlink(
+                            func, bound_args, cache_key, result, readable_dir, blob_path
+                        )
 
                 return result
 
             return wrapper
 
         return decorator
-
-    def _create_readable_symlink(
-        self,
-        func: DecoratedFn,
-        bound_args: dict,
-        cache_key: str,
-        result: pl.DataFrame | pl.LazyFrame,
-    ):
-        """Create a readable symlink structure pointing to the blob.
-
-        Creates a human-readable directory structure with symlinks that point
-        to the actual parquet files, making it easier to browse cached results
-        in the file system. The structure can be nested (module/function/args)
-        or flat (module.function/args) based on configuration.
-
-        Args:
-            func: The cached function.
-            bound_args: Bound arguments from the function call.
-            cache_key: The unique cache key for this result.
-            result: The function result (used for determining file type).
-        """
-        # Get module and function info
-        module_name = func.__module__
-        func_qualname = func.__qualname__
-
-        # Build the readable path structure
-        if self.nested:
-            # Split: readable_dir/encoded_module/encoded_qualname/args/
-            encoded_module = urllib.parse.quote(module_name, safe="")
-            encoded_qualname = urllib.parse.quote(func_qualname, safe="")
-            readable_path = self.readable_dir / encoded_module / encoded_qualname
-        else:
-            # Flat: readable_dir/encoded_full_qualname/args/
-            full_qualname = f"{module_name}.{func_qualname}"
-            encoded_qualname = urllib.parse.quote(full_qualname, safe="")
-            readable_path = self.readable_dir / encoded_qualname
-
-        entry_dir_name = self.create_entry_dir_name(func=func, bound_args=bound_args)
-        final_readable_dir = readable_path / entry_dir_name
-        final_readable_dir.mkdir(parents=True, exist_ok=True)
-
-        # Determine filename based on result type
-        if callable(self.symlink_name):
-            symlink_name = self.symlink_name(func, bound_args, result, cache_key)
-            if not isinstance(symlink_name, str):
-                raise TypeError(
-                    f"symlink_name callback must return str, got {type(symlink_name).__name__}"
-                )
-            if not symlink_name.strip():
-                raise ValueError(
-                    "symlink_name callback returned empty/whitespace-only string"
-                )
-        elif isinstance(self.symlink_name, str):
-            symlink_name = self.symlink_name
-            if not self.symlink_name.strip():
-                raise ValueError("symlink_name cannot be empty or whitespace-only")
-        else:
-            symlink_name = _DEFAULT_SYMLINK_NAME
-
-        # Create symlink
-        symlink_path = final_readable_dir / symlink_name
-        blob_path = self.parquet_dir / f"{cache_key}.parquet"
-
-        # Create relative path for symlink
-        try:
-            relative_blob = os.path.relpath(blob_path, final_readable_dir)
-            if not symlink_path.exists():
-                symlink_path.symlink_to(relative_blob)
-        except (OSError, FileExistsError):
-            # Symlink creation failed, but that's okay - cache still works
-            pass
 
     def clear(self):
         """Clear all cached data.
@@ -392,14 +284,18 @@ class PolarsCache:
         """
         self.cache.clear()
         # Remove parquet files
-        for parquet_file in self.parquet_dir.glob("*.parquet"):
+        for parquet_file in self.path_manager.parquet_dir.glob("*.parquet"):
             parquet_file.unlink()
         # Remove readable structure
-        if self.readable_dir.exists():
+        if self.path_manager.readable_dir.exists():
             import shutil
 
-            shutil.rmtree(self.readable_dir, ignore_errors=True)
-            self.readable_dir.mkdir(exist_ok=True)
+            shutil.rmtree(self.path_manager.readable_dir, ignore_errors=True)
+            self.path_manager.readable_dir.mkdir(exist_ok=True)
+
+
+# Convenience function for creating a global cache instance. Initialise with dummy cache
+_global_cache: PolarsCache | _DummyCache = _DummyCache()
 
 
 @snoop()
@@ -417,7 +313,7 @@ def cache(
 
     This function provides a simple interface to create and use a global cache
     instance for decorating functions that return Polars DataFrames or LazyFrames.
-    On first call, it initializes the global cache with the provided settings.
+    On first call, it initialises the global cache with the provided settings.
     Subsequent calls will reuse the existing cache unless a different cache_dir
     is specified.
 

@@ -1,7 +1,7 @@
 """Dummy cache implementation that provides a no-op decorator interface.
 
 This module contains a placeholder cache that doesn't actually cache anything,
-used as a default before the real cache is initialized or when caching is disabled.
+used as a default before the real cache is initialised or when caching is disabled.
 """
 
 from __future__ import annotations
