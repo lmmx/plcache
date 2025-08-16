@@ -16,6 +16,7 @@ dev = ["polars>=1.32.2"]
 debug = ["pysnooper>=1.2.3"]
 test = ["pytest>=8.4.1"]
 publish = ["pdm>=2.25.6", "pdm-bump>=0.9.12"]
+devex = ["mvdef>=0.9.4"]
 
 [tool.uv]
 default-groups = ["dev", "debug", "test", "publish"]

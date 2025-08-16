@@ -15,12 +15,17 @@ import diskcache
 import polars as pl
 
 from ._debugging import snoop
+from ._dummy import _DummyCache
 from ._parse_sizes import _parse_size
 
 if TYPE_CHECKING:
     from .types import CacheKeyCallback, DecoratedFn, EntryDirCallback, FilenameCallback
 
 _DEFAULT_SYMLINK_NAME = "output.parquet"
+
+
+# Convenience function for creating a global cache instance. Initialise with dummy cache
+_global_cache: PolarsCache | _DummyCache = _DummyCache()
 
 
 def _DEFAULT_CACHE_IDENT(func: DecoratedFn, bound_args: dict[str, Any]) -> str:
@@ -452,31 +457,6 @@ class PolarsCache:
 
             shutil.rmtree(self.readable_dir, ignore_errors=True)
             self.readable_dir.mkdir(exist_ok=True)
-
-
-class _DummyCache:
-    """A dummy cache that does nothing - just executes functions normally."""
-
-    cache_dir = None
-
-    def cache_polars(self, **kwargs):
-        """Return a no-op decorator that doesn't cache anything.
-
-        Args:
-            **kwargs: Ignored keyword arguments for compatibility.
-
-        Returns:
-            A decorator that returns the original function unchanged.
-        """
-
-        def decorator(func):
-            return func  # Just return the original function unchanged
-
-        return decorator
-
-
-# Convenience function for creating a global cache instance. Initialise with dummy cache
-_global_cache: PolarsCache | _DummyCache = _DummyCache()
 
 
 @snoop()
