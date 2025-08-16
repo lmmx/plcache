@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import polars as pl
+import pytest
 
 from plcache import cache
 
@@ -41,10 +42,10 @@ def test_callable_symlink_name(tmp_path):
     assert symlink_result.equals(original_result)
 
 
-def test_callable_symlink_fallback_on_error(tmp_path):
+def test_callable_symlink_raise_on_error(tmp_path):
     """Test that bad callbacks fall back to default filename."""
 
-    def bad_callback(func, args, kwargs, result, cache_key):
+    def bad_callback(func, bound_args, result, cache_key):
         # This callback will raise an exception
         raise ValueError("Callback failed!")
 
@@ -52,13 +53,12 @@ def test_callable_symlink_fallback_on_error(tmp_path):
     def fallback_test(value: int) -> pl.DataFrame:
         return pl.DataFrame({"value": [value]})
 
-    # Should not crash, should fall back to default
-    original_result = fallback_test(123)
+    # Should raise the callback error, not fall back silently
+    with pytest.raises(ValueError, match="Callback failed!"):
+        original_result = fallback_test(123)
 
     # Should find default filename
     cache_path = Path(tmp_path)
-    symlinks = list(cache_path.rglob("output.parquet"))  # default filename
+    symlinks = list(cache_path.rglob("*.parquet"))
     assert len(symlinks) == 1
-
-    symlink_result = pl.read_parquet(symlinks[0])
-    assert symlink_result.equals(original_result)
+    assert symlinks[0].parent.name == "blobs"

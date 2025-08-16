@@ -1,10 +1,12 @@
 ci:
   autofix_commit_msg: "chore(pre-commit): autofix run"
   autoupdate_commit_msg: "chore(pre-commit): autoupdate hooks"
+  skip: [run-just-rust-prepush]
 
 default_install_hook_types:
   - pre-commit
   - commit-msg
+  - pre-push
 
 repos:
   - repo: https://github.com/lmmx/just-pre-commit
@@ -12,6 +14,10 @@ repos:
     hooks:
       - id: run-just-rust
         args: ['precommit-ci']
+      - id: run-just-rust
+        alias: run-just-rust-prepush
+        args: ['prepush']
+        stages: [pre-push]
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.2.0
     hooks:

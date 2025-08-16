@@ -1,11 +1,20 @@
-precommit:    lint
-prepush:      lint    fmt taplo-check eof-check
+default:      lint
+
+precommit:    lint    fmt taplo-check eof-check
 precommit-ci: lint-ci fmt taplo-check eof-check
+
+prepush: precommit test
 
 lint:    ty    pf-miss-attr   check
 lint-ci: ty-ci pf-miss-attr ruff-check
 check: flake ruff-check
 fmt: ruff-fmt taplo-fix eof-fix
+
+install-hooks:
+   pre-commit install
+
+run-pc:
+   pre-commit run --all-files
 
 setup:
    #!/usr/bin/env bash
@@ -101,7 +110,7 @@ refresh-stubs:
     ./stub_gen.py
     deactivate
     mv .venv/ offvenv
-    pre-commit run --all-files
+    just run-pc
     rm -rf .venv
     mv offvenv .venv
 
