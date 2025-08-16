@@ -4,7 +4,7 @@ A diskcache decorator for Polars DataFrames and LazyFrames that saves results as
 
 ## What it does
 
-Caches expensive Polars operations to disk using Parquet format.
+Caches results of Polars operations to disk using Parquet format.
 When you call a decorated function with the same arguments, it loads the cached Parquet file instead of recomputing.
 
 It aims to provide a low-effort outlet for the DataFrames you store in memory without reinventing the wheel.

@@ -39,39 +39,6 @@ wheels = [
 ]
 
 [[package]]
-name = "plcache"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "diskcache" },
-    { name = "ty-extensions" },
-    { name = "typing-extensions" },
-]
-
-[package.dev-dependencies]
-debug = [
-    { name = "pysnooper" },
-]
-dev = [
-    { name = "polars" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "diskcache", specifier = ">=5.6.3" },
-    { name = "ty-extensions", specifier = ">=0.1.0" },
-    { name = "typing-extensions", specifier = ">=4.14.1" },
-]
-
-[package.metadata.requires-dev]
-debug = [{ name = "pysnooper", specifier = ">=1.2.3" }]
-dev = [
-    { name = "polars", specifier = ">=1.32.2" },
-    { name = "pytest", specifier = ">=8.4.1" },
-]
-
-[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -93,6 +60,37 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/91/58/d2840554ef1c69e06a28ee928bdaa0d6a61af12205ff24c096628f217f99/polars-1.32.2-cp39-abi3-win_amd64.whl", hash = "sha256:5e1660a584e89e1d60cd89984feca38a695e491a966581fefe8be99c230ea154", size = 37897347, upload-time = "2025-08-07T10:50:22.247Z" },
     { url = "https://files.pythonhosted.org/packages/b8/53/4eaaa4f219add46594db21a05a9a5629ec6af20bd859a90668d5a1448abc/polars-1.32.2-cp39-abi3-win_arm64.whl", hash = "sha256:cd390364f6f3927474bd0aed255103195b9d2b3eef0f0c5bb429db5e6311615e", size = 34059100, upload-time = "2025-08-07T10:50:26.445Z" },
 ]
+
+[[package]]
+name = "polars-diskcache"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "diskcache" },
+    { name = "ty-extensions" },
+]
+
+[package.dev-dependencies]
+debug = [
+    { name = "pysnooper" },
+]
+dev = [
+    { name = "polars" },
+]
+test = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "diskcache", specifier = ">=5.6.3" },
+    { name = "ty-extensions", specifier = ">=0.1.0" },
+]
+
+[package.metadata.requires-dev]
+debug = [{ name = "pysnooper", specifier = ">=1.2.3" }]
+dev = [{ name = "polars", specifier = ">=1.32.2" }]
+test = [{ name = "pytest", specifier = ">=8.4.1" }]
 
 [[package]]
 name = "pygments"
@@ -135,13 +133,4 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/80/08/de6357caa6dcd5aba4d0fdcb81736522ffdf1059af52db0f259eaa229a05/ty_extensions-0.1.0.tar.gz", hash = "sha256:c5a841b6f00656b1222cc3f4e626b54941fd857f1be4fd569d220070f0d73c79", size = 917, upload-time = "2025-05-02T20:06:21.035Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/b9/6e33e87aaa8e4b7fbd91f83cbccc2c162dd9e0349de43912b3e4b8eff31b/ty_extensions-0.1.0-py3-none-any.whl", hash = "sha256:0099ad2bf10eb23931c2fe586820c7fca0b1d2cb22499c6158b2fe409a24a1c9", size = 1274, upload-time = "2025-05-02T20:06:20.031Z" },
-]
-
-[[package]]
-name = "typing-extensions"
-version = "4.14.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/5a/da40306b885cc8c09109dc2e1abd358d5684b1425678151cdaed4731c822/typing_extensions-4.14.1.tar.gz", hash = "sha256:38b39f4aeeab64884ce9f74c94263ef78f3c22467c8724005483154c26648d36", size = 107673, upload-time = "2025-07-04T13:28:34.16Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/00/d631e67a838026495268c2f6884f3711a15a9a2a96cd244fdaea53b823fb/typing_extensions-4.14.1-py3-none-any.whl", hash = "sha256:d1e1e3b58374dc93031d6eda2420a48ea44a36c2b4766a4fdeb3710755731d76", size = 43906, upload-time = "2025-07-04T13:28:32.743Z" },
 ]

@@ -1,8 +1,9 @@
 precommit:    lint
-prepush:      lint             fmt taplo-check eof-check
-precommit-ci: ty-ci ruff-check fmt taplo-check eof-check
+prepush:      lint    fmt taplo-check eof-check
+precommit-ci: lint-ci fmt taplo-check eof-check
 
-lint: ty check
+lint:    ty    pf-miss-attr   check
+lint-ci: ty-ci pf-miss-attr ruff-check
 check: flake ruff-check
 fmt: ruff-fmt taplo-fix eof-fix
 
@@ -12,8 +13,8 @@ setup:
    source .venv/bin/activate
    uv sync
 
-test:
-   $(uv python find) -m pytest tests
+test *args:
+   $(uv python find) -m pytest tests {{args}}
 
 ty *args:
    #!/usr/bin/env bash
@@ -22,11 +23,31 @@ ty *args:
 t:
    just ty --output-format=concise
 
+pyrefly *args:
+   #!/usr/bin/env bash
+   pyrefly check {{args}}
+
+pf *args:
+   just pyrefly --output-format=min-text {{args}}
+
+pf-miss-attr:
+    #!/usr/bin/env bash
+    if pyrefly check src/plcache/ --output-format=min-text 2>&1 | rg -q "\[missing-attribute\]"; then
+        echo "ERROR: Found missing-attribute errors" >&2
+        exit 1
+    else
+        echo "pyrefly: [missing-attribute] check OK"
+        exit 0
+    fi
+
 flake:
    flake8 src/plcache --max-line-length=88 --extend-ignore=E203,E501,
 
 ruff-check mode="":
    ruff check . {{mode}}
+
+ruff-fix:
+   just ruff-check --fix
 
 ruff-fmt:
    ruff format .

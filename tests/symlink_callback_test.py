@@ -1,21 +1,23 @@
 """Test for callable symlink_name functionality."""
 
 from pathlib import Path
+
 import polars as pl
+
 from plcache import cache
 
 
 def test_callable_symlink_name(tmp_path):
     """Test that callable symlink_name works correctly."""
 
-    def filename_callback(func, args, kwargs, result, cache_key):
-        # Create filename based on function name, first arg, and result shape
-        first_arg = args[0] if args else "noargs"
+    def filename_callback(func, bound_args, result, cache_key):
+        # Create filename based on function name, value arg, and result shape
+        value = bound_args.get("value", "novalue")
         if isinstance(result, pl.DataFrame):
             rows = result.shape[0]
-            return f"{func.__name__}_{first_arg}_{rows}rows.parquet"
+            return f"{func.__name__}_{value}_{rows}rows.parquet"
         else:
-            return f"{func.__name__}_{first_arg}_lazy.parquet"
+            return f"{func.__name__}_{value}_lazy.parquet"
 
     @cache(cache_dir=tmp_path, symlink_name=filename_callback)
     def callback_test(value: int) -> pl.DataFrame:

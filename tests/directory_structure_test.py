@@ -39,7 +39,7 @@ def test_nested(tmp_path):
         / "functions"
         / encoded_module
         / encoded_qualname
-        / "arg0=42"
+        / "n=42"
         / "result.parquet"
     )
 
@@ -81,7 +81,7 @@ def test_flat_module_path(tmp_path):
         cache_path
         / "functions"
         / encoded_qualname
-        / "arg0=hello"
+        / "value=hello"
         / "cached_data.parquet"
     )
 
