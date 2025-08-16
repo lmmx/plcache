@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import functools
-import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import TYPE_CHECKING, Any, overload
 
 import diskcache
 import polars as pl
+import xxhash
 
 from ._args import normalise_args
 from ._debugging import snoop
@@ -75,7 +75,7 @@ class PolarsCache:
     def _get_cache_key(self, func: DecoratedFn, bound_args: dict[str, Any]) -> str:
         """Generate a cache key from function name and arguments."""
         ident = self.cache_ident(func, bound_args)
-        return hashlib.sha256(ident.encode()).hexdigest()
+        return xxhash.xxh64(ident.encode()).hexdigest()
 
     def _save_polars_result(
         self, result: pl.DataFrame | pl.LazyFrame, cache_key: str

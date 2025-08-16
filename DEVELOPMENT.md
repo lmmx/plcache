@@ -29,5 +29,4 @@ just refresh-stubs
 
 This is necessary to run type checking on airgapped CI.
 
-To debug with pysnooper, `export DEBUG_PYSNOOPER=true` and manually remove the `--no-group debug`
-from the recipe, or just call the script directly (see the Justfile `refresh-stubs` recipe for details).
+- To debug with pysnooper, run `just refresh-stubs --debug`
