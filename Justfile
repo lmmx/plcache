@@ -131,10 +131,15 @@ refresh-stubs *args="":
         unset DEBUG_PYSNOOPER
     fi
 
-pdmautobump *args:
+# Release a new version, pass --help for options to `pdm bump`
+release bump_level="micro":
     #!/usr/bin/env bash
     set -e  # Exit on any error
-    uv run pdm bump {{args}}
+    uv run pdm bump {{bump_level}}
+    # Exit early if help was requested
+    if [[ "{{bump_level}}" == "--help" ]]; then
+        exit 0
+    fi
     git add --all
     git commit -m "chore(temp): version check"
     new_version=$(uv run pdm show --version)

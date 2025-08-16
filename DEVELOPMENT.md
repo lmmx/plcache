@@ -30,3 +30,11 @@ just refresh-stubs
 This is necessary to run type checking on airgapped CI.
 
 - To debug with pysnooper, run `just refresh-stubs --debug`
+
+## Release
+
+Pass `--help` or a different bump argument (default: micro)
+
+```
+just release
+```
