@@ -59,10 +59,10 @@ assert df1.equals(df2)  # Identical results
 
 ## How it works
 
-We hash the function name and arguments to create a unique cache key:
+We hash the function name and arguments (with sorted `**kwargs`) to create a unique cache key:
 
 ```python
-call_str = f"{func_name}({args}, {kwargs})"
+call_str = f"{func_name}({bound_args})"
 cache_key = hashlib.sha256(call_str.encode()).hexdigest()
 ```
 
@@ -175,10 +175,91 @@ def data_processor(): ...
     symlinks_dir="functions",           # Readable directory name
     nested=True,                        # Module/function vs flat layout
     trim_arg=50,                        # Max argument length in paths
-    symlink_name="output.parquet"       # Custom symlink filename
+    symlink_name="output.parquet"       # Custom symlink filename (or a callback)
+    cache_key=my_cache_function,        # Custom cache key generation
+    entry_dir=my_dir_function,          # Custom directory naming
 )
 def fully_configured(): ...
 ```
+
+### Custom Cache Keys
+
+Control what gets cached together by customizing the cache key generation:
+
+```python
+def preprocessing_cache_key(func, bound_args):
+    """Cache key that ignores debug flags but includes data params."""
+    # Remove debug/logging flags from cache consideration
+    cache_params = {k: v for k, v in bound_args.items() 
+                   if k not in ['debug', 'verbose', 'log_level']}
+    return f"{func.__name__}({cache_params})"
+
+cache = PolarsCache(
+    cache_dir="./preprocessing_cache",
+    cache_key=preprocessing_cache_key
+)
+
+@cache.cache_polars()
+def preprocess_data(raw_data, normalize=True, remove_outliers=False, debug=False):
+    # Expensive data preprocessing that shouldn't re-run for debug flag changes
+    return expensive_preprocessing(raw_data, normalize, remove_outliers)
+
+# These calls will hit the same cache entry:
+clean_data1 = preprocess_data(df, normalize=True, debug=False)
+clean_data2 = preprocess_data(df, normalize=True, debug=True)  # Cache hit!
+```
+
+The debug flag doesn't affect the actual processing, so you want the same cached result
+whether the debug parameter is on or off.
+
+### Custom Directory Names
+
+Organize your cache directories with meaningful names:
+
+```python
+def experiment_dir_name(func, bound_args):
+    """Create experiment-specific directory names."""
+    model = bound_args['model_type']
+    dataset_size = len(bound_args['data'])
+    return f"{model}_experiment_{dataset_size}samples"
+
+cache = PolarsCache(
+    cache_dir="./experiments",
+    entry_dir=experiment_dir_name,
+    symlink_name="model_output.parquet"
+)
+
+@cache.cache_polars()
+def run_experiment(data, model_type, learning_rate=0.01):
+    return train_and_evaluate(data, model_type, learning_rate)
+
+# Creates: experiments/functions/.../xgboost_experiment_1000samples/model_output.parquet
+result = run_experiment(large_dataset, "xgboost", 0.001)
+```
+
+### Callback Signatures
+
+All callbacks receive normalized arguments where positional and keyword arguments are unified:
+
+```python
+# These calls produce identical bound_args:
+func(10, name="test")           # bound_args = {'value': 10, 'name': 'test'}
+func(value=10, name="test")     # bound_args = {'value': 10, 'name': 'test'} 
+func(name="test", value=10)     # bound_args = {'value': 10, 'name': 'test'} (sorted)
+```
+
+**Cache Key Callback**: `(func, bound_args) -> str`
+- Controls which function calls share cache entries
+- Return same string to share cache, different strings for separate entries
+
+**Entry Directory Callback**: `(func, bound_args) -> str`  
+- Controls symlink directory names for organization
+- Should return filesystem-safe directory names
+- Used for browsing, not for cache hits/misses
+
+**Symlink Name Callback**: `(func, bound_args, result, cache_key) -> str`
+- Controls the symlink filename within each directory
+- Receives the actual result and cache key for context
 
 ## Advanced Usage
 

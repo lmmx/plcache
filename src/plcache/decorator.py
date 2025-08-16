@@ -270,6 +270,7 @@ class PolarsCache:
         nested: bool | None = None,
         trim_arg: int | None = None,
         symlink_name: str | FilenameCallback | None = None,
+        # TODO: make these match the PolarsCache init!
     ):
         """Decorator for caching Polars DataFrames and LazyFrames.
 
