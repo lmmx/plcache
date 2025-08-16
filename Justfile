@@ -205,3 +205,32 @@ ty-ci:
     
     echo "🚀 Running ty check..."
     just ty .
+
+
+# Show all open GitHub issues with full bodies, or a specific issue number if provided
+issues number="" *args:
+    #!/usr/bin/env bash
+    if [ -n "{{number}}" ]; then
+        gh issue view "{{number}}" --json number,title,body \
+            --jq '"\n" + "=" * 60 + "\nISSUE #\(.number): \(.title)\n" + "=" * 60 + "\n\n\(.body)\n\n" + "-" * 60 + "\n"'
+    else
+        gh issue list {{args}} --state open \
+            --json number,title,body \
+            --jq '.[] | "\n" + "=" * 60 + "\nISSUE #\(.number): \(.title)\n" + "=" * 60 + "\n\n\(.body)\n\n" + "-" * 60 + "\n"'
+    fi
+
+# Search for issues by title text, then display using the issues recipe
+issue search_text:
+    #!/usr/bin/env bash
+    # Find issue number(s) that match the search text in title
+    issue_numbers=$(gh issue list --state open --search "{{search_text}} in:title" --json number --jq '.[].number')
+    
+    if [ -z "$issue_numbers" ]; then
+        echo "No issues found matching '{{search_text}}'"
+        exit 1
+    fi
+    
+    # Pass each found issue number to the issues recipe
+    for num in $issue_numbers; do
+        just issues "$num"
+    done
