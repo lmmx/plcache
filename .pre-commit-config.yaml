@@ -10,7 +10,7 @@ default_install_hook_types:
 
 repos:
   - repo: https://github.com/lmmx/just-pre-commit
-    rev: v0.6.1
+    rev: v0.6.2
     hooks:
       - id: run-just-rust
         name: just (lints)
@@ -28,7 +28,7 @@ repos:
         stages: [commit-msg]
         # args: [build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: debug-statements
       - id: name-tests-test
@@ -38,7 +38,7 @@ repos:
       - id: pyupgrade
         args: [--py313-plus]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.8
+    rev: v0.12.9
     hooks:
       # Run the linter
       - id: ruff
